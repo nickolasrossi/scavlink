@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style type="text/css">
+        html, body, #map-canvas {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+        }
+
+        .vehicle {
+            color: white;
+            font-family: "Lucida Grande", "Arial", sans-serif;
+            font-size: 11px;
+            font-weight: bold;
+            text-align: left;
+            text-shadow: -1px -1px 0 #888,
+                1px -1px 0 #888,
+                -1px 1px 0 #888,
+                1px 1px 0 #888;
+            width: auto;
+            border: 0px;
+            white-space: nowrap;
+        }
+
+        .waypoint {
+            color: black;
+            font-family: "Lucida Grande", "Arial", sans-serif;
+            font-size: 12px;
+            font-weight: bold;
+            text-align: center;
+            white-space: nowrap;
+        }
+    </style>
+
+    <script type="text/javascript" src="http://maps.googleapis.com/maps/api/js?key=AIzaSyDe9gnDBTZwZofsuPCKuMab5Z3ORsBC19Y"></script>
+    <script type="text/javascript" src="markerwithlabel.js"></script>
+    <script type="text/javascript" src="map.js"></script>
+</head>
+<body>
+<div id="map-canvas"></div>
+</body>
+</html>
