@@ -1,4 +1,4 @@
-# Scavlink: an open source drone control server for MAVLink autonomous vehicles
+# Scavlink: an open source Scala library for controlling MAVLink-based autonomous vehicles
 
 Scavlink is an open source Scala library with an embedded WebSocket server for controlling fleets of autonomous vehicles that speak the [MAVLink](http://qgroundcontrol.org/mavlink/start) protocol (e.g. [APM](http://ardupilot.com), [Pixhawk](https://pixhawk.ethz.ch)). It's based on [Akka](http://akka.io), with a fully asynchronous, event-based actor model for handling low-level packet conversations as well as orchestrating higher-level tasks across multiple vehicles.
 
