@@ -1,6 +1,6 @@
 package scavlink.connection.udp
 
-import java.net.InetSocketAddress
+import java.net.{InetAddress, InetSocketAddress}
 
 import akka.actor.{Actor, ActorLogging, ActorRef, Props}
 import akka.io.{IO, Udp}
@@ -8,7 +8,7 @@ import scavlink.ScavlinkInitializer
 import scavlink.connection._
 import scavlink.connection.frame.{FrameReceiver, FrameSender}
 import scavlink.connection.marshal.{MarshallerFactory, MessageMarshaller}
-import scavlink.link.{Vehicle, Link, SubscribeTo}
+import scavlink.link.{Link, SubscribeTo, Vehicle}
 import scavlink.message._
 import scavlink.message.common.Heartbeat
 import scavlink.message.enums.MavAutopilot
@@ -33,9 +33,9 @@ object UdpBridge {
  * Duplicate systemIds across connections are remapped to unique ids
  * so the external system sees unique systemIds for all vehicles.
  *
- * If the "allowReceive" setting is true, packets received on the port are
+ * If the "two-way" setting is true, packets received on the port are
  * forwarded to the target vehicle identified in the message's targetSystem field.
- * This allows the external system to control vehicles in parallel with the local library instance.
+ * This allows the external system to control vehicles in parallel with the library.
  * Messages without a targetSystem field are dropped, since we don't know where to send them.
  *
  * We don't remap the systemId of the external GCS packets, since autopilots typically
@@ -55,8 +55,16 @@ class UdpBridge(settings: BridgeSettings, events: ConnectionEventBus, marshaller
   private var byBridgedSystemId: Map[VehicleNumber, BridgedVehicle] = Map.empty
 
   val remote = settings.address
-  val bind = if (settings.allowReceive) {
-    Udp.Bind(self, new InetSocketAddress("0.0.0.0", 0))
+
+  val bind = if (settings.isTwoWay) {
+    // auto-configure interface
+    val interface = if (remote.getAddress.isLoopbackAddress) {
+      InetAddress.getLoopbackAddress
+    } else {
+      InetAddress.getByName("0.0.0.0")
+    }
+
+    Udp.Bind(self, new InetSocketAddress(interface, 0))
   } else {
     Udp.SimpleSender
   }
@@ -95,16 +103,22 @@ class UdpBridge(settings: BridgeSettings, events: ConnectionEventBus, marshaller
     }
   }
 
+  def become() = context.become(ready(sender(), new FrameReceiver(remote.toString, marshallerFactory)))
+
 
   def receive: Receive = {
     case Udp.Bound(local) =>
-      log.debug(s"Bound on $local")
-      log.debug(s"Initializing two-way bridge to $remote")
-      context.become(ready(sender(), new FrameReceiver(remote.toString, marshallerFactory)))
+      log.info(s"Bound on $local")
+      log.info(s"Started two-way bridge to $remote")
+      become()
 
     case Udp.SimpleSenderReady =>
-      log.debug(s"Initializing forward-only bridge to $remote")
-      context.become(ready(sender(), new FrameReceiver(remote.toString, marshallerFactory)))
+      log.info(s"Started forward-only bridge to $remote")
+      become()
+
+    case Udp.CommandFailed(cmd: Udp.Bind) =>
+      log.warning(s"Failed to bind to ${cmd.localAddress}; falling back to forward-only")
+      IO(Udp)(context.system) ! Udp.SimpleSender
   }
 
   def ready(socket: ActorRef, rx: FrameReceiver): Receive = {
@@ -137,12 +151,12 @@ class UdpBridge(settings: BridgeSettings, events: ConnectionEventBus, marshaller
       }
 
 
-    case Udp.Received(data, `remote`) if settings.allowReceive =>
+    case Udp.Received(data, `remote`) if settings.isTwoWay =>
       rx.receivedData(data) foreach {
         case Right(Packet(from, msg: TargetSystem[_])) =>
           val target = VehicleNumber(1, msg.targetSystem)
           for (bv <- byBridgedSystemId.get(target); link <- links.get(bv.vehicle.link.address)) {
-            log.debug(s"  ++> $msg")
+            log.debug(s"  ==> $msg")
             val mappedMsg = msg.setTargetSystem(bv.vehicle.info.systemId)
             link.send(mappedMsg)
           }
@@ -151,7 +165,8 @@ class UdpBridge(settings: BridgeSettings, events: ConnectionEventBus, marshaller
         case Left(error) => log.debug(s"$error")
         case _ => //
       }
-  }
 
-  override def toString = s"UdpBridge($remote)"
+
+    case _ => //
+  }
 }
