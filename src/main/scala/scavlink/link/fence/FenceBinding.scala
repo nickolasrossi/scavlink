@@ -19,9 +19,7 @@ object FenceBinding {
   val ConfigVehiclePrefix = "vehicle-name-prefix"
 
   def apply(fences: Map[String, Fence], config: Config): Set[FenceBinding] = {
-    if (fences.isEmpty) return Set.empty
-
-    if (config.hasPath("bind")) {
+    if (fences.nonEmpty && config.hasPath("bind")) {
       val list = config.getConfigList("bind")
       list.map(parseBinding(fences)).toSet
     } else {
