@@ -22,8 +22,8 @@ case class GpsState(vehicle: VehicleId,
 object GpsFixType extends Enumeration {
   val Unknown = Value(0)
   val None = Value(1)
-  val _2D = Value(2)
-  val _3D = Value(3)
+  val _2D = Value(2, "2D")
+  val _3D = Value(3, "3D")
   val DGPS = Value(4)
   val RTK = Value(5)
 }
