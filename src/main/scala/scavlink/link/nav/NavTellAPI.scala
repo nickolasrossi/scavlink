@@ -1,6 +1,7 @@
 package scavlink.link.nav
 
 import akka.actor.{Actor, ActorRef}
+import org.json4s.JsonAST.JNothing
 import scavlink.coord.Geo
 import scavlink.link.Vehicle
 import scavlink.link.mission._
@@ -142,58 +143,53 @@ object NavTellAPI {
   }
 
 
-  case object ExpectTakeoff extends ExpectOpResult {
+  case object ExpectTakeoff extends ExpectOpFailure {
     def opFailure = {
-      case (id: TaskId, fail: RotorTakeoffFailed) =>
-        TaskComplete.failed(id, fail.error.toString + ": " + fail.message)
-    }
-
-    def opResult = {
-      case (id: TaskId, RotorTakeoffResult(_, _, finalHeight)) => TaskComplete(id, Map("height" -> finalHeight))
+      case fail: RotorTakeoffFailed => TaskComplete.failed(fail.error.toString + ": " + fail.message)
     }
   }
 
 
   case object ExpectGoto extends ExpectOp {
     def dataFor(last: GotoLocations): Map[String, Any] = {
-      var data = Map("index" -> last.index, "distance" -> last.distance)
+      var data = Map("index" -> last.index, "waypoint" -> last.waypoint, "distance" -> last.distance)
       if (last.eta.isFinite()) data += ("eta" -> last.eta.toSeconds)
       data
     }
 
     def opFailure = {
-      case (id: TaskId, RunGuidedCourseFailed(_, _, last: GotoLocations, error, msg)) =>
-        TaskComplete(id, false, error.toString + ": " + msg, dataFor(last))
+      case RunGuidedCourseFailed(_, _, last: GotoLocations, error, msg) =>
+        TaskComplete(false, error.toString + ": " + msg, dataFor(last))
     }
 
     def opResult = PartialFunction.empty
 
     def opProgress = {
-      case (id: TaskId, RunGuidedCourseStatus(_, RunGuidedCourse(orig: GotoLocations), last: GotoLocations, _)) => // RunGuidedCourseStatus(_, _, /*RunGuidedCourse(orig: GotoLocations),*/ last: GotoLocations, _)) =>
+      case RunGuidedCourseStatus(_, RunGuidedCourse(orig: GotoLocations), last: GotoLocations, _) =>
         val progress = ((last.index.toFloat / orig.locations.length) * 100).toInt
-        TaskProgress(id, progress, "in transit", dataFor(last))
+        TaskProgress(progress, "in transit", dataFor(last))
     }
   }
 
 
   case object ExpectMission extends ExpectOp {
     def dataFor(last: TrackMission): Map[String, Any] = {
-      var data = Map("index" -> last.index, "distance" -> last.distance)
+      var data = Map("index" -> last.index, "waypoint" -> last.waypoint.getOrElse(JNothing), "distance" -> last.distance)
       if (last.eta.isFinite()) data += ("eta" -> last.eta.toSeconds)
       data
     }
 
     def opFailure = {
-      case (id: TaskId, RunMissionFailed(_, _, last: TrackMission, error, msg)) =>
-        TaskComplete(id, false, error.toString + ": " + msg, dataFor(last))
+      case RunMissionFailed(_, _, last: TrackMission, error, msg) =>
+        TaskComplete(false, error.toString + ": " + msg, dataFor(last))
     }
 
     def opResult = PartialFunction.empty
 
     def opProgress = {
-      case (id: TaskId, RunMissionStatus(_, RunMission(mission, orig: TrackMission), last: TrackMission, _)) =>
+      case RunMissionStatus(_, RunMission(mission, orig: TrackMission), last: TrackMission, _) =>
         val progress = ((last.index.toFloat / mission.length) * 100).toInt
-        TaskProgress(id, progress, "in transit", dataFor(last))
+        TaskProgress(progress, "in transit", dataFor(last))
     }
   }
 }

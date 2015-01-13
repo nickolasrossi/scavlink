@@ -16,8 +16,8 @@ class FlightMap(engine: WebEngine, flight: Flight) extends Runnable {
 
   def run(): Unit = {
     val system = ActorSystem("flight-map")
-    val trafficControl = TrafficControlActor.initializer(ProximityMonitor(20, 1))
-    val scavlink = ScavlinkInstance(system, initializers = trafficControl +: DefaultScavlinkInitializers)
+//    val trafficControl = TrafficControlActor.initializer(ProximityMonitor(20, 1))
+    val scavlink = ScavlinkInstance(system, initializers = /*trafficControl +:*/ DefaultScavlinkInitializers)
     system.actorOf(FlightMapActor.props(scavlink, this, flight), "flight")
   }
 

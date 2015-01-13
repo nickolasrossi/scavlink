@@ -26,7 +26,7 @@ class GpsFixActor(vehicle: Vehicle) extends VehicleOpActor[AwaitGpsFix](vehicle)
   when(Idle) {
     case Event(op: AwaitGpsFix, Uninitialized) =>
       start(op, sender())
-      link.events.subscribe(self, Telemetry.subscribeTo(vehicle, Set(classOf[GpsState])))
+      link.events.subscribe(self, Telemetry.subscribeTo(vehicle.id, Set(classOf[GpsState])))
       goto(Await)
   }
 

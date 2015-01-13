@@ -11,9 +11,9 @@ import spray.routing.HttpServiceActor
 import spray.routing.authentication.BasicUserContext
 
 object TaskRequestActor {
-  def props(conn: ActorRef, sup: ActorRef, sctx: ScavlinkContext,
+  def props(serverConnection: ActorRef, rootSupervisor: ActorRef, sctx: ScavlinkContext,
             apis: Seq[TaskAPI], vehicles: Map[VehicleId, Vehicle], user: BasicUserContext) =
-    Props(classOf[TaskRequestActor], conn, sup, sctx, apis, vehicles, user)
+    Props(classOf[TaskRequestActor], serverConnection, rootSupervisor, sctx, apis, vehicles, user)
 }
 
 /**
@@ -23,14 +23,14 @@ object TaskRequestActor {
  * @author Nick Rossi
  */
 class TaskRequestActor(val serverConnection: ActorRef,
-                       val supervisor: ActorRef,
+                       val rootSupervisor: ActorRef,
                        val sctx: ScavlinkContext,
                        val apis: Seq[TaskAPI],
                        val initVehicles: Map[VehicleId, Vehicle],
                        val user: BasicUserContext)
-  extends HttpServiceActor with WebSocketServerWorker with TaskInvokerSession with ActorLogging {
+  extends HttpServiceActor with WebSocketServerWorker with TaskSession with ActorLogging {
 
   def send(output: String): Unit = send(TextFrame(output))
 
-  def businessLogic: Receive = taskWorker
+  def businessLogic: Receive = taskSession
 }

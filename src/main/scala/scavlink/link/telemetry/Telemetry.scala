@@ -15,8 +15,8 @@ object Telemetry {
   /**
    * Subscribe to a set of telemetry states.
    */
-  def subscribeTo(vehicle: Vehicle, states: Set[Class[_ <: State]]) = SubscribeTo.complete {
-    case Telemetry(v, state, _) if vehicle.id == v.id && states.contains(state.getClass) => true
+  def subscribeTo(id: VehicleId, states: Set[Class[_ <: State]]) = SubscribeTo.complete {
+    case Telemetry(v, state, _) if id == v.id && states.contains(state.getClass) => true
   }
 
   /**

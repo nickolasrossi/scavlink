@@ -65,7 +65,7 @@ class RunMissionActor(vehicle: Vehicle) extends VehicleOpActor[RunMission](vehic
 
   when(StartMission) {
     case Event(_: ConversationSucceeded, MissionData(course, _)) =>
-      link.events.subscribe(self, Telemetry.subscribeTo(vehicle, course.states + classOf[SystemState]))
+      link.events.subscribe(self, Telemetry.subscribeTo(vehicle.id, course.states + classOf[SystemState]))
       goto(Active)
 
     case Event(Failure(f: ConversationFailed), MissionData(course, _)) =>

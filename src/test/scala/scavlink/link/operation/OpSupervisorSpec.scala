@@ -30,11 +30,11 @@ class OpSupervisorSpec(_system: ActorSystem)
   }
 
   def expectCancelled(op: Op): PartialFunction[Any, Boolean] = {
-    case Failure(e: CancelledException) => e.op == op
+    case Failure(e: CanceledException) => e.op == op
   }
 
   def expectCancelledByContext(ctx: Any, op: Op): PartialFunction[Any, Boolean] = {
-    case (`ctx`, Failure(e: CancelledException)) => e.op == op
+    case (`ctx`, Failure(e: CanceledException)) => e.op == op
   }
 
 

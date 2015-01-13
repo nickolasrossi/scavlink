@@ -2,7 +2,7 @@ package scavlink.task.service
 
 import akka.actor._
 import akka.io.IO
-import scavlink.ScavlinkContext
+import scavlink.{GetVehicles, ScavlinkContext}
 import scavlink.connection.{ConnectionSubscribeTo, Vehicles}
 import scavlink.link.Vehicle
 import scavlink.message.VehicleId
@@ -55,7 +55,8 @@ class TaskServiceActor(rootSupervisor: ActorRef,
 
   override def preStart() = {
     sctx.events.subscribe(self, ConnectionSubscribeTo.event(classOf[Vehicles]))
-    IO(UHttp)(context.system) ! Http.Bind(self, interface = settings.interface, port = settings.port)
+    rootSupervisor ! GetVehicles
+    IO(UHttp)(context.system) ! Http.Bind(self, settings.interface, settings.port)
   }
 
   def receive: Receive = authHandshaking orElse runRoute(plainHttp)

@@ -85,7 +85,7 @@ class RotorTakeoffActor(vehicle: Vehicle) extends VehicleOpActor[RotorTakeoff](v
 
   when(SetLoiter) {
     case Event(_: ConversationSucceeded, _) =>
-      link.events.subscribe(self, Telemetry.subscribeTo(vehicle, Set(classOf[ChannelState], classOf[LocationState])))
+      link.events.subscribe(self, Telemetry.subscribeTo(vehicle.id, Set(classOf[ChannelState], classOf[LocationState])))
       goto(FirstLocation)
 
     case Event(Failure(_: ConversationFailed), _) =>

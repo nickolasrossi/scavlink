@@ -55,7 +55,7 @@ class FenceActor(vehicle: Vehicle, settings: FenceSettings) extends Actor with A
   override def preStart() = {
     log.debug("Enforcing fences:")
     fences.foreach(f => log.debug(f.toString))
-    events.subscribe(self, Telemetry.subscribeTo(vehicle, Set(classOf[LocationState])))
+    events.subscribe(self, Telemetry.subscribeTo(vehicle.id, Set(classOf[LocationState])))
   }
 
   override def postStop() = events.unsubscribe(self)
