@@ -23,6 +23,10 @@ object Mode {
     mode
   }
 
+  val Unknown: Mode = newMode("Unknown") {
+    case _ => 0
+  }
+
   val Guided: Mode = newMode("Guided") {
     case GROUND_ROVER | SURFACE_BOAT => RoverMode.Guided.id
     case FIXED_WING => FixedWingMode.Guided.id

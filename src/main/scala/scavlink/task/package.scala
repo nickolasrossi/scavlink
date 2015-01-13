@@ -1,5 +1,7 @@
 package scavlink
 
+import org.json4s.JValue
+
 package object task {
-  type TaskId = String
+  type RequestContext = JValue
 }

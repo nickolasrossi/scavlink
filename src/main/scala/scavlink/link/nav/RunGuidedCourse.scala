@@ -45,13 +45,13 @@ class RunGuidedCourseActor(vehicle: Vehicle) extends VehicleOpActor[RunGuidedCou
   when(Idle) {
     case Event(op: RunGuidedCourse, Uninitialized) =>
       start(op, sender())
-      vehicle.setMode(Mode.Guided)
+      vehicle.setModeToHeartbeat(Mode.Guided)
       goto(SetGuided) using GuidedData(op.course, false)
   }
 
   when(SetGuided) {
     case Event(_: ConversationSucceeded, GuidedData(course, _)) =>
-      link.events.subscribe(self, Telemetry.subscribeTo(vehicle, course.states + classOf[SystemState]))
+      link.events.subscribe(self, Telemetry.subscribeTo(vehicle.id, course.states + classOf[SystemState]))
       vehicle.holdConversation(guidedPoint(course.waypoint))
       goto(SetPoint)
 

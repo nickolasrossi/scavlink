@@ -3,14 +3,12 @@ package scavlink.task
 import akka.actor.Status.Failure
 import scavlink.link.operation._
 
-import scala.annotation.StaticAnnotation
-
 /**
  * Partial functions that convert received actor messages into
- * TaskProgress or TaskResult objects for response to a web invoke.
+ * TaskProgress or TaskResult objects for update on a websocket session.
  * @author Nick Rossi
  */
-trait Expect extends StaticAnnotation {
+trait Expect {
   def progress: PartialFunction[Any, TaskProgress]
   def result: PartialFunction[Any, TaskComplete]
   def failure: PartialFunction[Any, TaskComplete]
@@ -21,34 +19,34 @@ trait Expect extends StaticAnnotation {
  */
 trait ExpectOp extends Expect {
   final def progress: PartialFunction[Any, TaskProgress] = {
-    case (id: TaskId, p: OpProgress) => opProgress.applyOrElse((id, p), defaultProgress)
+    case p: OpProgress => opProgress.applyOrElse(p, defaultProgress)
   }
 
   final def result: PartialFunction[Any, TaskComplete] = {
-    case (id: TaskId, r: OpResult) => opResult.applyOrElse((id, r), defaultResult)
+    case (r: OpResult) => opResult.applyOrElse(r, defaultResult)
   }
 
   final def failure: PartialFunction[Any, TaskComplete] = {
-    case (id: TaskId, Failure(e: OpException)) => opFailure.applyOrElse((id, e), defaultFailure)
+    case Failure(e: Exception) => opFailure.applyOrElse(e, defaultFailure)
   }
 
-  protected def opProgress: PartialFunction[(TaskId, OpProgress), TaskProgress]
-  protected def opResult: PartialFunction[(TaskId, OpResult), TaskComplete]
-  protected def opFailure: PartialFunction[(TaskId, OpException), TaskComplete]
+  protected def opProgress: PartialFunction[OpProgress, TaskProgress]
+  protected def opResult: PartialFunction[OpResult, TaskComplete]
+  protected def opFailure: PartialFunction[Exception, TaskComplete]
 
-  private def defaultProgress(p: (TaskId, OpProgress)): TaskProgress = p match {
-    case (id, queued: Queued) => TaskProgress(id, queued.percent, "queued")
-    case (id, started: Started) => TaskProgress(id, started.percent, "started")
-    case (id, joined: Joined) => TaskProgress(id, joined.percent, "joined")
-    case (id, x) => TaskProgress(id, x.percent)
+  private def defaultProgress(p: OpProgress): TaskProgress = p match {
+    case queued: Queued => TaskProgress(queued.percent, "queued")
+    case started: Started => TaskProgress(started.percent, "started")
+    case joined: Joined => TaskProgress(joined.percent, "joined")
+    case x => TaskProgress(x.percent)
   }
 
-  private def defaultResult(r: (TaskId, OpResult)): TaskComplete = r match {
-    case (id, _) => TaskComplete(id)
+  private def defaultResult(r: OpResult): TaskComplete = r match {
+    case _ => TaskComplete()
   }
 
-  private def defaultFailure(f: (TaskId, OpException)): TaskComplete = f match {
-    case (id, e) => TaskComplete.failed(id, e.getMessage)
+  private def defaultFailure(f: Exception): TaskComplete = f match {
+    case e => TaskComplete.failed(e.getMessage)
   }
 }
 
@@ -56,19 +54,23 @@ trait ExpectOpResult extends ExpectOp {
   protected def opProgress: PartialFunction[Any, TaskProgress] = PartialFunction.empty
 }
 
+trait ExpectOpFailure extends ExpectOpResult {
+  protected def opResult: PartialFunction[OpResult, TaskComplete] = PartialFunction.empty
+}
+
 
 case class ExpectOpDefault() extends ExpectOpResult {
-  protected def opFailure: PartialFunction[(TaskId, OpException), TaskComplete] = PartialFunction.empty
-  protected def opResult: PartialFunction[(TaskId, OpResult), TaskComplete] = PartialFunction.empty
+  protected def opFailure: PartialFunction[Exception, TaskComplete] = PartialFunction.empty
+  protected def opResult: PartialFunction[OpResult, TaskComplete] = PartialFunction.empty
 }
 
 
 case class ExpectConversation() extends ExpectOpResult {
   def opFailure = {
-    case (id: TaskId, fail: ConversationFailed) => TaskComplete.failed(id, s"Failed ${ fail.failedStep }")
+    case fail: ConversationFailed => TaskComplete.failed(s"Failed ${ fail.failedStep }")
   }
 
   def opResult = {
-    case (id: TaskId, _: ConversationSucceeded) => TaskComplete(id)
+    case _: ConversationSucceeded => TaskComplete()
   }
 }

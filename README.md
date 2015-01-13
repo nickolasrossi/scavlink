@@ -275,7 +275,6 @@ The server should respond with the list of active vehicles:
 [
   {
     "id": "tcp-client:127.0.0.1:5760#1",
-    "link": "tcp-client:127.0.0.1:5760",
     "type": "QUADROTOR",
     "autopilot": "ARDUPILOTMEGA",
     "group": 1,
@@ -293,7 +292,7 @@ If you installed the Chrome WebSocket tool above, you should see a "WS" button t
 Enter the Scavlink server address in the tool's URL field:
 
 ```
-URL: ws://localhost:8080/
+ws://localhost:8080/
 ```
 
 Click the "Open" button. If the connection succeeds, the Status field will change to OPENED. (If you get a popup alert, it means the browser isn't authenticated correctly; review the previous step.)
@@ -301,16 +300,35 @@ Click the "Open" button. If the connection succeeds, the Status field will chang
 You should also see an initial "VehicleUp" notification for the SITL vehicle:
 
 ```json
-{"vehicleUp":{"vehicle":{"id":"tcp-client:127.0.0.1:5760#1","link":"tcp-client:127.0.0.1:5760","type":"QUADROTOR","autopilot":"ARDUPILOTMEGA","group":1,"number":1}}}
+{"vehicleUp":{"vehicle":{"id":"tcp-client:127.0.0.1:5760#1","type":"QUADROTOR","autopilot":"ARDUPILOTMEGA","group":1,"number":1}}}
 ```
 
-Now, paste this JSON into the Request field and press Send:
+Let's get some telemetry started. Paste this JSON into the Request field and press Send:
+
+```json
+{ 
+  "startTelemetry": { 
+    "vehicle": "tcp-client:127.0.0.1:5760#1", 
+    "interval": 2 
+  }
+}
+```
+
+You should begin to see telemetry messages every 2 seconds:
+
+```json
+{"telemetry":{"vehicle":"tcp-client:127.0.0.1:5760#1","location":[37.4117603,-121.9941601,0.0],"batteryVoltage":12.586999893188477,"state":"STANDBY","mode":"Manual","throttle":0.0,"course":0.0,"heading":-295.61,"groundspeed":0.0,"climb":0.0,"gpsFix":"3D"}}
+```
+
+Now, let's get the vehicle in the air. Send this JSON request:
 
 ```json
 {
-  "id": "my-context-id-1"
-  "Nav.rotorGentleTakeoff": {
-    "vehicle": "tcp-client:127.0.0.1:5760#1"
+  "context": "my-id-1",
+  "startTask": {
+    "Nav.rotorGentleTakeoff": {
+      "vehicle": "tcp-client:127.0.0.1:5760#1"
+    }
   }
 }
 ```
@@ -318,31 +336,50 @@ Now, paste this JSON into the Request field and press Send:
 You should see two progress notifications for the new task:
 
 ```json
-{"taskProgress":{"id":"my-context-id-1","progress":-1,"message":"submitted","data":{}}}
-{"taskProgress":{"id":"my-context-id-1","progress":0,"message":"started","data":{}}}
+{"taskProgress":{"progress":-1,"message":"submitted","data":{}},"context":"my-id-1"}
+{"taskProgress":{"progress":0,"message":"started","data":{}},"context":"my-id-1"}
 ```
 
 On the map, you should see your vehicle's throttle ramp up to 56% and the vehicle slowly ascend.
 
-When the vehicle reaches 2 meters, it should hover there, and you should see one more notification:
+When the vehicle reaches 2 meters, it should hover there, and you should see the completion notification:
 
 ```json
-{"taskComplete":{"id":"my-context-id-1","success":true,"message":"","data":{"finalHeight":2.0}}}
+{"taskComplete":{"success":true,"message":"","data":{}},"context":"my-id-1"}
 ```
 
 Now, send the vehicle on a long journey to the North Pole:
 
 ```json
 { 
-  "id": "my-context-id-2"
-  "Nav.gotoLocation": {
-    "vehicle": "tcp-client:127.0.0.1:5760#1",
-    "location": [ 90, 0, 80 ]
+  "context": "my-id-2",
+  "startTask": {
+    "Nav.gotoLocation": {
+      "vehicle": "tcp-client:127.0.0.1:5760#1",
+      "location": [ 90, 0, 80 ],
+      "maxEta": 999999999
+    }
   }
 }
 ```
 
 We could have submitted `gotoLocation` before `rotorGentleTakeoff` completed; the server would have queued it, knowing they're both navigation operations on the same vehicle that shouldn't execute concurrently.
+
+If you want to give up on the North Pole trip, just cancel the task:
+
+```json
+{
+  "stopTask": {
+    "context": "my-id-2"
+  }
+}
+```
+
+Which should result in:
+
+```json
+{"taskComplete":{"success":false,"message":"canceled","data":{}},"context":"my-id-2"}
+```
 
 That's it for now! The WebSocket remains open for more tasks.
 

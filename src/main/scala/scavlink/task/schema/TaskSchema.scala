@@ -67,10 +67,9 @@ object TaskSchema extends App {
         case _ => None
       }
     }
-    else if (CustomTypes.allTypes.contains(typ)) {
+    else if (CustomTypes.allTypes.exists(_._1 =:= typ)) {
       Some(Left(Pointer(CustomTypes.nameOf(typ))))
     }
     else None
   }
 }
-

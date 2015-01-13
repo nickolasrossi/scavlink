@@ -5,12 +5,12 @@ import com.fasterxml.jackson.core.JsonParseException
 import org.json4s.JsonAST.{JField, JObject}
 import org.json4s._
 import org.json4s.jackson.JsonMethods._
-import org.json4s.jackson.Serialization
 import scavlink.coord.{Geo, LatLon}
 import scavlink.link.Vehicle
 import scavlink.link.operation.{OpFlags, WithContext, WithProgress}
-import scavlink.message.{Mode, VehicleId}
 import scavlink.message.common.MissionItem
+import scavlink.message.{Mode, VehicleId}
+import scavlink.task.Serializers._
 import scavlink.task._
 
 import scala.reflect.runtime.universe._
@@ -30,30 +30,27 @@ class InvalidJsonException(msg: String) extends Exception(msg)
 class JsonTaskInvoker(apis: Seq[TaskAPI], vehicles: Map[VehicleId, Vehicle], sender: ActorRef) {
 
   import org.json4s.DefaultReaders._
-  import scavlink.task.schema.CustomTypeSerializers._
 
-  val vehicleSerializer = new VehicleIdSerializer(vehicles)
-  implicit val formats = Serialization.formats(NoTypeHints) ++
-                         serializers + vehicleSerializer
+  implicit val formats = Serializers.all
 
   implicit object MissionItemReader extends Reader[MissionItem] {
-    def read(value: JValue): MissionItem = MissionItemSerializer.deserialize(formats)(null, value)
+    def read(value: JValue): MissionItem = MissionItemSerializer.deserialize(formats)(TypeInfo(classOf[MissionItem], None), value)
   }
 
   implicit object GeoReader extends Reader[Geo] {
-    def read(value: JValue): Geo = GeoSerializer.deserialize(formats)(null, value)
+    def read(value: JValue): Geo = GeoSerializer.deserialize(formats)(TypeInfo(classOf[Geo], None), value)
   }
 
   implicit object LatLonReader extends Reader[LatLon] {
-    def read(value: JValue): LatLon = LatLonSerializer.deserialize(formats)(null, value)
+    def read(value: JValue): LatLon = LatLonSerializer.deserialize(formats)(TypeInfo(classOf[LatLon], None), value)
   }
 
   implicit object ModeReader extends Reader[Mode] {
-    def read(value: JValue): Mode = ModeSerializer.deserialize(formats)(null, value)
+    def read(value: JValue): Mode = ModeSerializer.deserialize(formats)(TypeInfo(classOf[Mode], None), value)
   }
 
-  implicit object VehicleReader extends Reader[Vehicle] {
-    def read(value: JValue): Vehicle = vehicleSerializer.deserialize(formats)(null, value)
+  implicit object VehicleIdReader extends Reader[VehicleId] {
+    def read(value: JValue): VehicleId = VehicleIdSerializer.deserialize(formats)(TypeInfo(classOf[VehicleId], None), value)
   }
 
 
@@ -156,7 +153,7 @@ class JsonTaskInvoker(apis: Seq[TaskAPI], vehicles: Map[VehicleId, Vehicle], sen
     case t if t =:= typeOf[Short] => value.getAs[Short]
     case t if t =:= typeOf[Byte] => value.getAs[Byte]
 
-    case t if t =:= typeOf[Vehicle] => value.getAs[Vehicle]
+    case t if t =:= typeOf[Vehicle] => value.getAs[VehicleId] map vehicles
     case t if t =:= typeOf[Geo] => value.getAs[Geo]
     case t if t =:= typeOf[LatLon] => value.getAs[LatLon]
     case t if t =:= typeOf[MissionItem] => value.getAs[MissionItem]

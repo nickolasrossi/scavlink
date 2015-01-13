@@ -280,7 +280,7 @@ trait OpSupervisor[O <: Op, P] extends Actor with ActorLogging {
   private def cancelRunning(op: Op, actor: ActorRef, responder: Responder, origin: Origin, send: Boolean = true): Unit = {
     val newResponder = responder.remove(origin)
     running += op ->(actor, newResponder)
-    if (send) origin.send(Failure(new CancelledException(op)))
+    if (send) origin.send(Failure(new CanceledException(op)))
 
     if (newResponder.result.isEmpty) {
       log.debug(s"Stopping orphaned op: $op")
@@ -291,7 +291,7 @@ trait OpSupervisor[O <: Op, P] extends Actor with ActorLogging {
   private def cancelQueued(op: Op, responder: Responder, origin: Origin, send: Boolean = true): Unit = {
     val newResponder = responder.remove(origin)
     queue += op -> newResponder
-    if (send) origin.send(Failure(new CancelledException(op)))
+    if (send) origin.send(Failure(new CanceledException(op)))
 
     if (newResponder.result.isEmpty) {
       log.debug(s"Removing orphaned op from queue: $op")
@@ -354,6 +354,6 @@ trait OpSupervisor[O <: Op, P] extends Actor with ActorLogging {
   }
 }
 
-class CancelledException(val op: Op) extends Exception
+class CanceledException(val op: Op) extends Exception("canceled")
 class UnexpectedTerminationException(val op: Op) extends OpException
-class IllegalOperationException(val op: AnyRef) extends Exception
+class IllegalOperationException(val op: AnyRef) extends Exception("illegal operation")
