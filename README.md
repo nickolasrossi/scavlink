@@ -1,4 +1,4 @@
-# Scavlink: an open source drone control server for MAVLink autonomous vehicles
+# Scavlink: an open source Scala library for orchestrating MAVLink-based autonomous vehicles
 
 Scavlink is an open source Scala library with an embedded WebSocket server for controlling fleets of autonomous vehicles that speak the [MAVLink](http://qgroundcontrol.org/mavlink/start) protocol (e.g. [APM](http://ardupilot.com), [Pixhawk](https://pixhawk.ethz.ch)). It's based on [Akka](http://akka.io), with a fully asynchronous, event-based actor model for handling low-level packet conversations as well as orchestrating higher-level tasks across multiple vehicles.
 
@@ -33,8 +33,6 @@ As well, the JVM/Scala/Akka stack will hopefully make drone development more acc
 * Parallel transect (“lawnmower”) mission plan over a polygon region
 * Enforced geofencing with stay-in, stay-out, and report-only modes
 * Experimental vehicle proximity monitor
-
-
 * Case class code generator for MAVLink messages
 * MAVLink packet logger/viewer compatible with standard flight logs
 * Embedded Google map for following vehicles (a dev tool, not a GCS replacement)
@@ -42,7 +40,7 @@ As well, the JVM/Scala/Akka stack will hopefully make drone development more acc
 
 ### Big TODOs
 
-It's a nascent project. Pull requests welcome!
+It's a new-ish project. Pull requests welcome!
 
 * Camera operations. Sadly, there are no tasks or APIs yet for image capture.
 * Persistence and clustering. Except for log files, all runtime data is currently transient. But the code base is designed to evolve toward a true, production-ready cloud service.
@@ -59,7 +57,7 @@ If you haven't worked with WebSockets before, now's the time to learn!
 
 ### Contributors
 
-Nick Rossi <nickrossi@creativepath.net> [@creativepath](https://twitter.com/creativepath)
+Nick Rossi | <nickrossi@creativepath.net> | [@creativepath](https://twitter.com/creativepath)
 
 ## Getting started
 
@@ -198,7 +196,7 @@ This should stream packets to the console and pop up a Google map in a browser w
 
 ### SITL
 
-Chances are you’ll want to run the library against the Ardupilot software-in-the-loop simulator. That’s where you can go nuts with experiments before you fly your real drone into a wall.
+You’ll definitely want to run the library against the Ardupilot software-in-the-loop simulator. That’s where you can go nuts with experiments before you fly your real drone into a wall.
 
 3DRobotics has a nice guide to setting up SITL. Follow their steps carefully for your OS. (Note: SITL doesn’t compile on a Mac. If you only have a Mac, try to scrounge up an old computer for a Linux installation if you can.)
 
@@ -219,7 +217,7 @@ scavlink/tools/sitl/sim_fleet.sh -> ardupilot/Tools/autotest/sim_fleet.sh
 scavlink/tools/sitl/sim_only.sh -> ardupilot/Tools/autotest/sim_only.sh
 ```
 
-Now, follow the SITL instructions again to start up the simulator - but instead of running `sim_vehicle.sh`, run `sim_only.sh`. This should start SITL without mavproxy.
+Now, follow the SITL instructions again to start up the simulator - but instead of running `sim_vehicle.sh`, run `sim_only.sh`. This should start the SITL process without MAVProxy.
 
 Go back to your scavlink configuration and ensure the `tcp-client` connection references the host and port of the SITL process.
 
@@ -231,7 +229,7 @@ $ sbt ‘it:runMain MapView’
 
 If all is well, you should see packets on the console coming from the SITL process, and the simulated vehicle should appear on the map.
 
-> Part of the fun with this project is controlling many drones at once. However, the SITL process for a single vehicle consumes nearly 100% of a CPU core in order to run a real-time loop. On a dual-core machine, running more than two SITL processes will make them all behave erratically. A good todo item would be an AMI image to run lots of SITL simulations across many EC2 servers.
+> Part of the fun with this project is controlling lots of drones at once. However, the SITL process for a single vehicle consumes nearly 100% of a CPU core in order to run a real-time loop. On a dual-core machine, running more than two SITL processes will make them all behave erratically. A good todo item would be an AMI image to run lots of SITL simulations across many EC2 servers.
 
 ### Task requests
 
@@ -290,9 +288,7 @@ At the same time, the server has cached your token, which will allow the WebSock
 
 ##### WebSocket tool
 
-If you installed the Chrome WebSocket tool above, you should see a "WS" button to the right of your address bar. Use it to open the tool:
-
-![WebSocket tool](https://lh3.googleusercontent.com/bEHoKg3ijfjaE8-RWTONDBZolc3tP2mLbyWanolCfLmpTHUyYPMSD5I4hKBfi81D2hVpVH_BfQ=s640-h400-e365-rw)
+If you installed the Chrome WebSocket tool above, you should see a "WS" button to the right of your address bar. Use it to open the tool in a new tab.
 
 Enter the Scavlink server address in the tool's URL field:
 
