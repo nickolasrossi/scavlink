@@ -429,7 +429,8 @@ Code base tour in the works.
 Path | meaning
 ----- | ------
 /token | obtain a token from credentials (Basic or OAuth2)
-/schema | JSON schema for all recognized API methods
+/schema/requests | JSON schema for WebSocket request messages
+/schema/responses | JSON schema for WebSocket response messages
 /vehicles | list of currently active vehicles
 
 ##### WebSocket JSON messages
