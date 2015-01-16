@@ -2,12 +2,12 @@ package scavlink.task.service
 
 import akka.actor._
 import akka.io.IO
-import scavlink.{GetVehicles, ScavlinkContext}
 import scavlink.connection.{ConnectionSubscribeTo, Vehicles}
 import scavlink.link.Vehicle
 import scavlink.message.VehicleId
 import scavlink.task._
-import scavlink.task.schema.TaskSchema
+import scavlink.task.schema.{ComplexTypes, RootSchema}
+import scavlink.{GetVehicles, ScavlinkContext}
 import spray.can.server.UHttp
 import spray.can.{Http, websocket}
 import spray.http.HttpHeaders.{Authorization, Connection}
@@ -36,7 +36,7 @@ object TaskServiceActor {
  * @author Nick Rossi
  */
 class TaskServiceActor(rootSupervisor: ActorRef,
-                       sctx: ScavlinkContext, 
+                       sctx: ScavlinkContext,
                        apis: Seq[TaskAPI],
                        settings: ServiceSettings,
                        val sslSettings: SslSettings)
@@ -44,6 +44,7 @@ class TaskServiceActor(rootSupervisor: ActorRef,
   with CachingDirectives with ExecutionDirectives with Json4sJacksonSupport {
 
   import context.dispatcher
+
   implicit val json4sJacksonFormats = Serializers.all
   implicit val routeSettings = RoutingSettings(context.system.settings.config)
 
@@ -72,7 +73,7 @@ class TaskServiceActor(rootSupervisor: ActorRef,
         case ctx: websocket.HandshakeContext =>
           // check for valid token before upgrading connection
           val authHeader = ctx.request.headers.findByType[`Authorization`]
-          val credentials = authHeader.map { case Authorization(creds) => creds }
+          val credentials = authHeader.map { case Authorization(creds) => creds}
           val token = credentials match {
             case Some(BasicHttpCredentials(u, pw)) => Some(pw)
             case Some(OAuth2BearerToken(t)) => Some(t)
@@ -107,7 +108,7 @@ class TaskServiceActor(rootSupervisor: ActorRef,
     jsonpWithParameter("jsonp") {
       path("token") {
         respondWithHeader(Connection("close")) {
-          (post & parameters('grant_type ! "password", 'username, 'password)) { (user, pass) =>   // OAuth2
+          (post & parameters('grant_type ! "password", 'username, 'password)) { (user, pass) => // OAuth2
             val authenticator = UserPassAuthenticator.fromConfig[Token](routeSettings.users)(tokenStore.addUserPass)
             complete {
               authenticator(Some(UserPass(user, pass)))
@@ -120,13 +121,21 @@ class TaskServiceActor(rootSupervisor: ActorRef,
       } ~
       authenticate(BasicAuth(tokenStore.checkUserPass _, "token")) { user =>
         get {
-          path("schema") {
-            alwaysCache(httpCache) {
-              complete(TaskSchema(apis))
-            }
-          } ~
           path("vehicles") {
             complete(vehicles.values)
+          } ~
+          pathPrefix("schema") {
+            alwaysCache(httpCache) {
+              path("requests") {
+                complete(RootSchema.requests(apis))
+              } ~
+              path("responses") {
+                complete(RootSchema.responses())
+              } ~
+              path("types") {
+                complete(ComplexTypes.schemas)
+              }
+            }
           }
         }
       }

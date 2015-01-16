@@ -39,7 +39,7 @@ case class StartTask(method: JValue) extends Request {
 case class StopTask(context: RequestContext) extends Request {
   require(context != JNothing, "Task context to stop not provided")
 }
-case class StartTelemetry(vehicle: VehicleId, interval: Int) extends Request {
+case class StartTelemetry(vehicle: VehicleId, interval: Int = 2) extends Request {
   require(interval > 0 && interval <= 60, "telemetry interval must be between 1 and 60 seconds")
 }
 case class StopTelemetry(vehicle: VehicleId) extends Request
@@ -53,9 +53,9 @@ case class VehicleDown(vehicle: Vehicle) extends Response
 case class StatusMessage(vehicle: VehicleId, text: String) extends Response
 case class Error(message: String) extends Response
 case class Telemetry(vehicle: VehicleId, location: Geo = Geo(), batteryVoltage: Double = 0,
-                     state: MavState.Value = MavState(0), mode: Mode = Mode.Unknown,
+                     state: String = "", mode: String = "",
                      throttle: Double = 0, course: Double = 0, heading: Double = 0, groundspeed: Double = 0,
-                     climb: Double  = 0, gpsFix: GpsFixType.Value = GpsFixType(0)) extends Response
+                     climb: Double  = 0, gpsFix: String = "") extends Response
 
 sealed trait TaskStatus extends Response {
   def message: String
@@ -67,8 +67,6 @@ case class TaskProgress(progress: Int = 0, message: String = "", data: Map[Strin
 
 case class TaskComplete(success: Boolean = true, message: String = "", data: Map[String, Any] = Map.empty)
   extends TaskStatus
-
-case class ContextResponse(context: RequestContext, obj: Response)
 
 object TaskComplete {
   def apply(data: Map[String, Any]): TaskComplete = TaskComplete(true, "", data)
@@ -89,7 +87,7 @@ object Protocol {
   val ContextField = "context"
   implicit val formats = Serializers.all
 
-  val fieldNameFor = Memoize[Class[_], String] { cls =>
+  val propertyNameOf: Class[_] => String = Memoize { cls =>
     val field = cls.getSimpleName
     field.head.toLower + field.tail
   }
@@ -109,13 +107,13 @@ object Protocol {
 
   implicit object StartTelemetryReader extends Reader[StartTelemetry] {
     def read(value: JValue): StartTelemetry = value match {
-      case JString(v) => StartTelemetry(VehicleId(v), 1)
+      case JString(v) => StartTelemetry(VehicleId(v))
       case jobj: JObject =>
         val vehicle = jobj \ "vehicle"
         val interval = jobj \ "interval"
         (vehicle, interval) match {
           case (JString(v), JInt(i)) => StartTelemetry(VehicleId(v), i.toInt)
-          case (JString(v), JNothing) => StartTelemetry(VehicleId(v), 1)
+          case (JString(v), JNothing) => StartTelemetry(VehicleId(v))
           case x => throw new MappingException(s"Can't convert $x to StartTelemetry")
         }
 
@@ -179,10 +177,10 @@ object Protocol {
     json.obj match {
       case JField(req, obj: JValue) :: Nil =>
         req match {
-          case r if r == fieldNameFor(classOf[StartTask]) => read[StartTask](obj)
-          case r if r == fieldNameFor(classOf[StopTask]) => read[StopTask](obj)
-          case r if r == fieldNameFor(classOf[StartTelemetry]) => read[StartTelemetry](obj)
-          case r if r == fieldNameFor(classOf[StopTelemetry]) => read[StopTelemetry](obj)
+          case r if r == propertyNameOf(classOf[StartTask]) => read[StartTask](obj)
+          case r if r == propertyNameOf(classOf[StopTask]) => read[StopTask](obj)
+          case r if r == propertyNameOf(classOf[StartTelemetry]) => read[StartTelemetry](obj)
+          case r if r == propertyNameOf(classOf[StopTelemetry]) => read[StopTelemetry](obj)
           case r => throw new InvalidJsonException(s"Unrecognized request '$r'")
         }
 
@@ -192,7 +190,7 @@ object Protocol {
   }
 
   def writeResponse(response: Response, context: RequestContext = JNothing): String = {
-    val field = fieldNameFor(response.getClass)
+    val field = propertyNameOf(response.getClass)
     val value = response match {
       case o: VehicleUp => write(o)
       case o: VehicleDown => write(o)

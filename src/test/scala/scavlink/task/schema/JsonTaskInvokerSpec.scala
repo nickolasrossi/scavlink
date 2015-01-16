@@ -10,7 +10,7 @@ import scavlink.link.Vehicle
 import scavlink.link.mission._
 import scavlink.link.nav.NavTellAPI.Nav
 import scavlink.link.operation.VehicleOpSpecSupport
-import scavlink.message.Mode
+import scavlink.message.{VehicleId, Mode}
 import scavlink.message.common.MissionItem
 import scavlink.task.{MethodNotFoundException, ParameterMissingException, TaskAPI, TestAPI}
 
@@ -150,13 +150,14 @@ with ImplicitSender with MissionTestData {
     }
 
     "invoke with Vehicle" in {
-      val json: JObject = "x" -> Extraction.decompose(vehicle)
+      val json: JObject = "x" -> Extraction.decompose(id)
       invoke[Vehicle](json) shouldBe vehicle
     }
 
     "invoke with VehicleId" in {
       val json: JObject = "x" -> Extraction.decompose(id)
-      invoke[Vehicle](json) shouldBe vehicle
+      println(json)
+      invoke[VehicleId](json) shouldBe id
     }
 
     "invoke with VehicleId string" in {
@@ -202,6 +203,7 @@ class InvokerTestAPI(sender: ActorRef = Actor.noSender) {
 
   def callQueue(x: Queue[Int]): Queue[Int] = x.map(_ + 1) // failure case
 
+  def callVehicleId(x: VehicleId): VehicleId = x
   def callVehicle(x: Vehicle): Vehicle = x
   def callMode(x: Mode): Mode = x
   def callLatLon(x: LatLon): LatLon = LatLon(x.lon, x.lat)

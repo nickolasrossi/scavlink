@@ -20,6 +20,11 @@ class TestAPI(count: Int, sender: ActorRef = Actor.noSender) {
     value + count
   }
 
+  def addOptionalValue(name: String, value: Option[Int]): Int = {
+    println(s"addOptionalValue: $count, $sender, $name, $value")
+    value.getOrElse(0) + count
+  }
+
   def doubleParamList(num: Int, alt: Double = 5)(name: String, lat: Double = alt): Double = {
     println(s"doubleParamList: $count, $sender, $num, $alt, $name, $lat")
     lat + count
@@ -33,6 +38,10 @@ class TestAPI(count: Int, sender: ActorRef = Actor.noSender) {
 
   def invalidType(num: Int, api: TestAPI): Unit = {
     println(s"invalidType")
+  }
+
+  def invalidOptionType(num: Int, api: Option[TestAPI]): Unit = {
+    println(s"invalidOptionType")
   }
 
   def invalidCollectionType(num: Int, stack: Queue[Int]): Unit = {

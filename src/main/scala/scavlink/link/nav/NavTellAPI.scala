@@ -68,7 +68,7 @@ object NavTellAPI {
     }
 
     /**
-     * Use default settings for a hard takeoff.
+     * Use default settings for an aggressive takeoff.
      */
     def rotorHardTakeoff()(implicit sender: ActorRef = Actor.noSender, flags: OpFlags = OpFlags(WithProgress)): Expect = {
       vehicle.navigation !(flags, RotorTakeoff.Hard)
@@ -81,14 +81,9 @@ object NavTellAPI {
      * @param maxEta cancel course if ETA calculation exceeds this many seconds
      * @param smoothingWindow number of seconds to average out ETA calculation
      */
-    def gotoLocation(location: Geo, maxEta: Long = 6.hours.toMinutes, smoothingWindow: Int = 10)
+    def gotoLocation(location: Geo, maxEta: Option[Long], smoothingWindow: Option[Int])
                     (implicit sender: ActorRef = Actor.noSender, flags: OpFlags = OpFlags(WithProgress)): Expect = {
-      runGuidedCourse(GotoLocations(
-        Vector(location),
-        maxEta = maxEta.seconds,
-        smoothingWindow = smoothingWindow.seconds
-      ))
-      ExpectGoto
+      gotoLocations(Vector(location), maxEta, smoothingWindow)
     }
 
     /**
@@ -97,13 +92,13 @@ object NavTellAPI {
      * @param maxEta cancel course if ETA calculation exceeds this many seconds
      * @param smoothingWindow number of seconds to average out ETA calculation
      */
-    def gotoLocations(locations: Vector[Geo], maxEta: Long = 6.hours.toSeconds, smoothingWindow: Int = 10)
+    def gotoLocations(locations: Vector[Geo], maxEta: Option[Long], smoothingWindow: Option[Int])
                      (implicit sender: ActorRef = Actor.noSender, flags: OpFlags = OpFlags(WithProgress)): Expect = {
-      runGuidedCourse(GotoLocations(
-        locations,
-        maxEta = maxEta.seconds,
-        smoothingWindow = smoothingWindow.seconds
-      ))
+      var course = GotoLocations(locations)
+      maxEta.map(eta => course = course.copy(maxEta = eta.seconds))
+      smoothingWindow.map(window => course = course.copy(smoothingWindow = window.seconds))
+
+      runGuidedCourse(course)
       ExpectGoto
     }
 
@@ -152,9 +147,12 @@ object NavTellAPI {
 
   case object ExpectGoto extends ExpectOp {
     def dataFor(last: GotoLocations): Map[String, Any] = {
-      var data = Map("index" -> last.index, "waypoint" -> last.waypoint, "distance" -> last.distance)
-      if (last.eta.isFinite()) data += ("eta" -> last.eta.toSeconds)
-      data
+      val data = Map.newBuilder[String, Any]
+      data += "index" -> last.index
+      data += "waypoint" -> last.waypoint
+      if (!last.distance.isNaN) data += "distance" -> last.distance
+      if (last.eta.isFinite()) data += "eta" -> last.eta.toSeconds
+      data.result()
     }
 
     def opFailure = {
@@ -174,9 +172,12 @@ object NavTellAPI {
 
   case object ExpectMission extends ExpectOp {
     def dataFor(last: TrackMission): Map[String, Any] = {
-      var data = Map("index" -> last.index, "waypoint" -> last.waypoint.getOrElse(JNothing), "distance" -> last.distance)
-      if (last.eta.isFinite()) data += ("eta" -> last.eta.toSeconds)
-      data
+      val data = Map.newBuilder[String, Any]
+      data += "index" -> last.index
+      data += "waypoint" -> last.waypoint.getOrElse(JNothing)
+      if (!last.distance.isNaN) data += "distance" -> last.distance
+      if (last.eta.isFinite()) data += "eta" -> last.eta.toSeconds
+      data.result()
     }
 
     def opFailure = {

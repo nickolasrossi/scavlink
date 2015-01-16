@@ -7,7 +7,7 @@ import org.joda.time.DateTime
 import scavlink.coord.{Geo, LatLon}
 import scavlink.link.Vehicle
 import scavlink.link.operation.OpFlags
-import scavlink.message.Mode
+import scavlink.message.{VehicleId, Mode}
 import scavlink.message.common.MissionItem
 
 import scala.annotation.StaticAnnotation
@@ -148,14 +148,19 @@ case class TaskAPI(typ: Type, ctor: APIMethod, methods: Map[String, APIMethod]) 
       methodMirror(values: _*)
     }
 
-    params.map { case (arg, _) =>
-      argMap.get(arg) match {
+    params.map { case (param, paramType) =>
+      argMap.get(param) match {
         case Some(value) => value
+
+        case None if paramType <:< typeOf[Option[_]] =>
+          argMap += param -> None
+          None
+
         case None =>
           // must add every default value we get back to the running arg map,
           // since default methods in secondary lists require prior arg values
-          val value = default(arg)
-          argMap += arg -> value
+          val value = default(param)
+          argMap += param -> value
           value
       }
     }.toList
@@ -206,16 +211,18 @@ object APIMethod {
   def apply(ms: MethodSymbol): APIMethod = {
     val name = ms.name.decodedName.toString
     val descAnno = ms.annotations.find(a => a.tree.tpe =:= typeOf[Description])
-    val desc = descAnno.map { a => // todo: pull this out to function
-      val args = a.tree.children.tail
-      val vals = args.map(_.productElement(0).asInstanceOf[Constant].value)
-      vals.head.asInstanceOf[String]
-    }
+    val description = descAnno.map(descriptionAnnotation)
 
     val params = extractParams(ms)
     val defaults = extractDefaults(ms, params)
     val paramTypes = params.map { case (k, v) => (k, v.typeSignature) }
-    APIMethod(name, desc, ms, paramTypes, defaults)
+    APIMethod(name, description, ms, paramTypes, defaults)
+  }
+
+  private[task] def descriptionAnnotation(anno: Annotation): String = {
+    val args = anno.tree.children.tail
+    val vals = args.map(_.productElement(0).asInstanceOf[Constant].value)
+    vals.head.asInstanceOf[String]
   }
 
 
@@ -275,10 +282,10 @@ object TaskAPI {
 
   // todo: allow Option as non-required field
   val allowedCollectionTypes = List(
-    typeOf[List[_]], typeOf[Vector[_]], typeOf[Set[_]], typeOf[Map[String, _]])
+    typeOf[List[_]], typeOf[Vector[_]], typeOf[Set[_]], typeOf[Map[String, _]], typeOf[Option[_]])
 
   val allowedParamTypes = List(
-    typeOf[ActorRef], typeOf[OpFlags], typeOf[Vehicle],
+    typeOf[ActorRef], typeOf[OpFlags], typeOf[Vehicle], typeOf[VehicleId],
     typeOf[String], typeOf[Double], typeOf[Int], typeOf[Boolean], typeOf[Long], typeOf[Float],
     typeOf[Geo], typeOf[LatLon], typeOf[MissionItem], typeOf[Mode],
     typeOf[DateTime], typeOf[Byte], typeOf[Short]

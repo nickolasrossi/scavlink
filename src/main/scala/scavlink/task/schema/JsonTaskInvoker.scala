@@ -153,11 +153,17 @@ class JsonTaskInvoker(apis: Seq[TaskAPI], vehicles: Map[VehicleId, Vehicle], sen
     case t if t =:= typeOf[Short] => value.getAs[Short]
     case t if t =:= typeOf[Byte] => value.getAs[Byte]
 
-    case t if t =:= typeOf[Vehicle] => value.getAs[VehicleId] map vehicles
+    case t if t =:= typeOf[VehicleId] => value.getAs[VehicleId]
+    case t if t =:= typeOf[Vehicle] => (value.getAs[VehicleId] map vehicles.get).flatten
     case t if t =:= typeOf[Geo] => value.getAs[Geo]
     case t if t =:= typeOf[LatLon] => value.getAs[LatLon]
     case t if t =:= typeOf[MissionItem] => value.getAs[MissionItem]
     case t if t =:= typeOf[Mode] => value.getAs[Mode]
+
+    case t if t <:< typeOf[Option[_]] =>
+      val elemType = t.dealias.typeArgs.head
+      val arg = parseValue(elemType)(value)
+      arg.map(Some(_))  // re-box as option
 
     case t if t <:< typeOf[Map[String, _]] => value match {
       case JObject(values) =>
@@ -171,8 +177,8 @@ class JsonTaskInvoker(apis: Seq[TaskAPI], vehicles: Map[VehicleId, Vehicle], sen
 
     case t if t <:< typeOf[Iterable[_]] => value match {
       case JArray(array) =>
-        val elem = t.dealias.typeArgs.head
-        val items = for (v <- array; nv <- parseValue(elem)(v)) yield nv
+        val elemType = t.dealias.typeArgs.head
+        val items = for (v <- array; nv <- parseValue(elemType)(v)) yield nv
 
         t match {
           case x if x <:< typeOf[List[_]] => Some(items)

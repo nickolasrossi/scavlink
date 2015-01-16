@@ -72,11 +72,6 @@ object Mode {
     case QUADROTOR | OCTOROTOR | HEXAROTOR | TRICOPTER | HELICOPTER | COAXIAL => RotorMode.Circle.id
   }
 
-  val Acro: Mode = newMode("Acro") {
-    case FIXED_WING => FixedWingMode.Acro.id
-    case QUADROTOR | OCTOROTOR | HEXAROTOR | TRICOPTER | HELICOPTER | COAXIAL => RotorMode.Acro.id
-  }
-
   def apply(name: String): Mode = instances(name)
 
   def get(name: String): Option[Mode] = instances.get(name)

@@ -139,8 +139,8 @@ trait TaskSession extends TaskSessionTelemetry {
     val oldIds = vehicles.keySet
 
     newIds diff oldIds foreach { id =>
-      // todo: refactor underlying telemetry as a known subscriber model
-      // todo: so that requests like this don't override another
+      // todo: refactor underlying telemetry as a subscription model
+      // todo: so that telemetry start/stop requests like this don't override ones from elsewhere in application
       val vehicle = vs(id)
       vehicle.setTelemetryStreams(DefaultTelemetryStreams.all)
       send(writeResponse(VehicleUp(vehicle)))
@@ -169,7 +169,7 @@ trait TaskSession extends TaskSessionTelemetry {
           TaskProgress(-1, "submitted")
 
         case x =>
-          TaskComplete(Map("value" -> x))
+          TaskComplete(Map("result" -> x))
       }
     } catch {
       case e: Exception =>

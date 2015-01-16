@@ -2,7 +2,7 @@ package scavlink.task.schema
 
 import scavlink.coord.{Geo, LatLon}
 import scavlink.link.Vehicle
-import scavlink.message.Mode
+import scavlink.message.{VehicleId, Mode}
 import scavlink.message.common.MissionItem
 
 import scala.collection.immutable.ListMap
@@ -11,19 +11,29 @@ import scala.reflect.runtime.universe._
 /**
  * Schemas for local types that are allowed to be API method arguments.
  */
-object CustomTypes {
-  val vehicle = typeOf[Vehicle] -> Schema(PropertyType.String)
+object ComplexTypes {
+  private val vehicleId = typeOf[VehicleId] -> Schema(PropertyType.String)
 
-  val geo = typeOf[Geo] -> Schema(PropertyType.Array,
+  private val vehicle = typeOf[Vehicle] -> Schema(PropertyType.Object,
+    properties = ListMap(
+      "id" -> Right(Schema(PropertyType.String)),
+      "type" -> Right(Schema(PropertyType.String)),
+      "autopilot" -> Right(Schema(PropertyType.String)),
+      "group" -> Right(Schema(PropertyType.Integer)),
+      "number" -> Right(Schema(PropertyType.Integer))
+    )
+  )
+
+  private val geo = typeOf[Geo] -> Schema(PropertyType.Array,
     items = Some(Right(Schema(PropertyType.Number))), minItems = Some(3), maxItems = Some(3))
 
-  val latlon = typeOf[LatLon] -> Schema(PropertyType.Array,
+  private val latlon = typeOf[LatLon] -> Schema(PropertyType.Array,
     items = Some(Right(Schema(PropertyType.Number))), minItems = Some(2), maxItems = Some(2))
 
-  val mode = typeOf[Mode] -> Schema(PropertyType.String,
+  private val mode = typeOf[Mode] -> Schema(PropertyType.String,
     enum = Mode.values.keySet.toList)
 
-  val missionItem = typeOf[MissionItem] -> Schema(PropertyType.Object,
+  private val missionItem = typeOf[MissionItem] -> Schema(PropertyType.Object,
     properties = ListMap(
       "seq" -> Right(Schema(PropertyType.Integer)),
       "command" -> Right(Schema(PropertyType.Integer)),
@@ -36,8 +46,9 @@ object CustomTypes {
     required = List("seq", "command", "frame", "current", "autocontinue", "params"))
 
 
-  val allTypes = List(vehicle, geo, latlon, mode, missionItem).toMap
-  val allNames = allTypes.map { case (k, v) => (nameOf(k), v) }
+  val types = List(vehicleId, vehicle, geo, latlon, mode, missionItem).toMap
 
-  def nameOf(typ: Type): String = typ.typeSymbol.name.decodedName.toString
+  val schemas = types map { case (typ, schema) =>
+    (definitionNameOf(typ), schema)
+  }
 }

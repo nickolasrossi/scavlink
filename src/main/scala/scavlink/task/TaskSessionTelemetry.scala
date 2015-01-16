@@ -23,7 +23,7 @@ trait TaskSessionTelemetry {
   import context.dispatcher
 
   private var telemetry: Map[VehicleId, Telemetry] = Map.empty
-  private var sendCycles: mutable.Map[VehicleId, Cancellable] = mutable.Map.empty
+  private var sendLoops: mutable.Map[VehicleId, Cancellable] = mutable.Map.empty
 
   // need to memoize matchers so that they can be unsubscribed
   private val matchers = Memoize(telemetrySubscription)
@@ -69,15 +69,15 @@ trait TaskSessionTelemetry {
 
     case s: SystemState =>
       telem.copy(
-        state = s.systemState,
-        mode = Mode.from(vehicle.info.vehicleType, s.specificMode).getOrElse(Mode.Unknown)
+        state = s.systemState.toString,
+        mode = Mode.from(vehicle.info.vehicleType, s.specificMode).getOrElse(Mode.Unknown).toString
       )
 
     case s: ChannelState =>
       telem.copy(throttle = s.throttle)
 
     case s: GpsState =>
-      telem.copy(gpsFix = s.fixType)
+      telem.copy(gpsFix = s.fixType.toString)
 
     case s: BatteryState =>
       telem.copy(batteryVoltage = s.voltage)
@@ -87,6 +87,10 @@ trait TaskSessionTelemetry {
   // protocol requests
 
   def startTelemetry(vehicle: Vehicle, interval: Int): Unit = {
+    if (telemetry.contains(vehicle.id)) {
+      stopTelemetry(vehicle)
+    }
+
     val matcher = matchers(vehicle.id)
     vehicle.link.events.subscribe(self, matcher)
 
@@ -95,11 +99,11 @@ trait TaskSessionTelemetry {
         send(writeResponse(telem))
       }
     }
-    sendCycles += vehicle.id -> cycle
+    sendLoops += vehicle.id -> cycle
   }
 
   def stopTelemetry(vehicle: Vehicle): Unit = {
-    sendCycles.remove(vehicle.id).foreach(_.cancel())
+    sendLoops.remove(vehicle.id).foreach(_.cancel())
     telemetry -= vehicle.id
     val unsubscribed = vehicle.link.events.unsubscribe(self, matchers(vehicle.id))
     if (!unsubscribed) {

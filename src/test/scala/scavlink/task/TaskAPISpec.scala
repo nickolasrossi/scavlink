@@ -77,6 +77,7 @@ class TaskAPISpec extends WordSpec with Matchers with MissionTestData {
     "expose valid methods" in {
       assert(testAPI.methods.contains("chooseMode"))
       assert(testAPI.methods.contains("addValue"))
+      assert(testAPI.methods.contains("addOptionalValue"))
       assert(testAPI.methods.contains("doubleParamList"))
     }
 
@@ -94,6 +95,7 @@ class TaskAPISpec extends WordSpec with Matchers with MissionTestData {
 
     "not expose method with invalid types" in {
       assert(!testAPI.methods.contains("invalidType"))
+      assert(!testAPI.methods.contains("invalidOptionType"))
       assert(!testAPI.methods.contains("invalidCollectionType"))
     }
   }
@@ -153,6 +155,14 @@ class TaskAPISpec extends WordSpec with Matchers with MissionTestData {
     "invoke a method with a default value in a second parameter list" in {
       val result = testAPI.invoke("addValue", Map("count" -> 4, "name" -> "what"))
       result shouldBe 14
+    }
+
+    "invoke a method with an Option paramter unspecified" in {
+      val result = testAPI.invoke("addOptionalValue", Map("count" -> 4, "name" -> "what"))
+      result shouldBe 4
+
+      val result2 = testAPI.invoke("addOptionalValue", Map("count" -> 4, "name" -> "what", "value" -> Some(9)))
+      result2 shouldBe 13
     }
 
     "invoke a method with collection parameters" in {
