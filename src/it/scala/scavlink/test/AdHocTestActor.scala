@@ -121,11 +121,11 @@ class AdHocTestActor(events: ConnectionEventBus) extends Actor with ActorLogging
       vehicle.setThrottle(throttle)
 
     case SetDataStreams(vehicle) =>
-      vehicle.setTelemetryStreams(DefaultTelemetryStreams.all, telemetryInterval, PublishImmediately)
+      vehicle.setTelemetryStreams(DefaultTelemetryStreams.all, telemetryInterval, PublishImmediate)
 
     case SetOneDataStream(vehicle) =>
       val streams: StateGenerators = Set(DefaultTelemetryStreams.system)
-      vehicle.setTelemetryStreams(streams)
+      vehicle.setTelemetryStreams(streams, telemetryInterval)
 
     case StopAllStreams(vehicle) =>
       vehicle.stopAllTelemetry()

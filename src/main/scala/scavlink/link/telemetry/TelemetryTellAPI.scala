@@ -31,8 +31,8 @@ object TelemetryTellAPI {
      * @param publish when to publish events: on a timed interval, or on every received message (default: Interval)
      */
     def setTelemetryStreams(streams: StateGenerators,
-                            interval: FiniteDuration = 1.second,
-                            publish: PublishTiming = PublishOnInterval)
+                            interval: FiniteDuration,
+                            publish: PublishMode = PublishOnInterval)
                            (implicit sender: ActorRef = Actor.noSender): Unit =
       vehicle.telemetry ! SetTelemetryStreams(streams, interval, publish)
 

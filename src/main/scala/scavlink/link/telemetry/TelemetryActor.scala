@@ -18,14 +18,14 @@ case object StopAllTelemetry extends TelemetryAction
 
 case class SetTelemetryStreams(streams: StateGenerators,
                                interval: FiniteDuration,
-                               publish: PublishTiming) extends TelemetryAction {
+                               publish: PublishMode) extends TelemetryAction {
   require(interval >= 20.milliseconds)
 }
 
 
-sealed trait PublishTiming
-case object PublishImmediately extends PublishTiming
-case object PublishOnInterval extends PublishTiming
+sealed trait PublishMode
+case object PublishImmediate extends PublishMode
+case object PublishOnInterval extends PublishMode
 
 
 object TelemetryActor {
@@ -37,7 +37,9 @@ object TelemetryActor {
  * @author Nick Rossi
  */
 class TelemetryActor(vehicle: Vehicle) extends Actor with ActorLogging {
+
   import context.dispatcher
+
   private type StateMap = Map[StateGenerator[_ <: State], State]
   private case class RetrySetStreams(interval: FiniteDuration, tries: Int)
 
@@ -65,6 +67,16 @@ class TelemetryActor(vehicle: Vehicle) extends Actor with ActorLogging {
   private var expecting: StateGenerators = Set.empty
 
 
+  override def preStart() = {
+    if (vehicle.settings.autostartTelemetry) {
+      self ! SetTelemetryStreams(
+        DefaultTelemetryStreams.all, 
+        settings.autostartInterval,
+        if (settings.autostartImmediateMode) PublishImmediate else PublishOnInterval
+      )
+    }
+  }
+
   override def postStop() = {
     publisher.foreach(_.cancel())
     link.events.unsubscribe(self)
@@ -72,11 +84,11 @@ class TelemetryActor(vehicle: Vehicle) extends Actor with ActorLogging {
 
   def receive: Receive = {
     case SetTelemetryStreams(newStreams, interval, publishOn) =>
-      log.debug(s"Activating telemetry: ${ newStreams.map(_.stateType.getSimpleName) } every $interval")
+      log.debug(s"Activating telemetry: ${newStreams.map(_.stateType.getSimpleName)} every $interval")
       setStreams(newStreams, interval, publishOn)
 
     case StopAllTelemetry =>
-      setStreams(Set.empty, 1.second, PublishImmediately)
+      setStreams(Set.empty, 1.second, PublishImmediate)
 
     case RetrySetStreams(interval, tries) =>
       if (expecting.nonEmpty) {
@@ -84,11 +96,11 @@ class TelemetryActor(vehicle: Vehicle) extends Actor with ActorLogging {
         requestStreams(expecting, interval, tries)
       }
 
-    case packet @ Packet(_, msg) =>
+    case packet@Packet(_, msg) =>
       packets.get(msg._id) match {
         case Some(existing) if packet.seq <= existing.seq =>
-          // do nothing if latest packet has duplicate or earlier sequence number.
-          // only the latest telemetry update is ever relevant.
+        // do nothing if latest packet has duplicate or earlier sequence number.
+        // only the latest telemetry update is ever relevant.
 
         case _ =>
           packets(msg._id) = packet
@@ -129,7 +141,7 @@ class TelemetryActor(vehicle: Vehicle) extends Actor with ActorLogging {
   /**
    * Activate the requested streams and deactivate any old ones not in the new list.
    */
-  private def setStreams(newGenerators: StateGenerators, interval: FiniteDuration, publish: PublishTiming): Unit = {
+  private def setStreams(newGenerators: StateGenerators, interval: FiniteDuration, publish: PublishMode): Unit = {
     // first, shut off all existing streams
     publisher.map(_.cancel())
     publisher = None
@@ -148,7 +160,7 @@ class TelemetryActor(vehicle: Vehicle) extends Actor with ActorLogging {
 
     // retain messages and states relevant to the new streams
     val newMessageIds = newMessages.map(_._id)
-    packets.retain { case (id, _) => newMessageIds.contains(id) }
+    packets.retain { case (id, _) => newMessageIds.contains(id)}
 
     // populate new state objects where needed
     states = newGenerators.map { gen =>
@@ -206,11 +218,16 @@ class TelemetryActor(vehicle: Vehicle) extends Actor with ActorLogging {
 }
 
 
-case class TelemetrySettings(timeout: FiniteDuration, retries: Int)
+case class TelemetrySettings(autostartInterval: FiniteDuration,
+                             autostartImmediateMode: Boolean,
+                             timeout: FiniteDuration,
+                             retries: Int)
 
 object TelemetrySettings extends SettingsCompanion[TelemetrySettings]("telemetry") {
   def fromSubConfig(config: Config): TelemetrySettings =
     TelemetrySettings(
+      getDuration(config, "autostart-interval"),
+      config.getBoolean("autostart-immediate-mode"),
       getDuration(config, "request-timeout"),
       config.getInt("request-retries")
     )

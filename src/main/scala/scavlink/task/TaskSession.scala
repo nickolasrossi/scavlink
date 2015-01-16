@@ -4,7 +4,6 @@ import akka.actor.{Actor, ActorLogging, ActorRef}
 import scavlink.connection.{ConnectionSubscribeTo, Vehicles}
 import scavlink.link.Vehicle
 import scavlink.link.operation.CancelContext
-import scavlink.link.telemetry.DefaultTelemetryStreams
 import scavlink.message.VehicleId
 import scavlink.task.Protocol._
 import scavlink.task.schema.{InvalidJsonException, JsonTaskInvoker}
@@ -12,7 +11,6 @@ import scavlink.{GetVehicles, ScavlinkContext}
 import spray.can.websocket.UpgradedToWebSocket
 import spray.can.websocket.frame.TextFrame
 import spray.routing.authentication.BasicUserContext
-import scavlink.link.telemetry.TelemetryTellAPI._
 
 import scala.annotation.tailrec
 
@@ -139,10 +137,7 @@ trait TaskSession extends TaskSessionTelemetry {
     val oldIds = vehicles.keySet
 
     newIds diff oldIds foreach { id =>
-      // todo: refactor underlying telemetry as a subscription model
-      // todo: so that telemetry start/stop requests like this don't override ones from elsewhere in application
       val vehicle = vs(id)
-      vehicle.setTelemetryStreams(DefaultTelemetryStreams.all)
       send(writeResponse(VehicleUp(vehicle)))
     }
 

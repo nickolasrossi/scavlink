@@ -91,7 +91,6 @@ class FlightMapActor(scavlink: ScavlinkInstance, map: FlightMap, missions: Fligh
       vehicles += id -> vehicle
       vehicleNumber += id -> nextVehicleNumber()
       map.vehicleUp(vehicle.id, vehicle.info.vehicleType)
-      vehicle.setTelemetryStreams(Set(DefaultTelemetryStreams.gps), telemetryInterval, PublishOnInterval)
 
     case VehicleDown(vehicle) =>
       log.debug(s"!!! Vehicle down: $vehicle")
@@ -104,7 +103,6 @@ class FlightMapActor(scavlink: ScavlinkInstance, map: FlightMap, missions: Fligh
       val id = vehicle.id
       if (!fix.contains(id)) {
         fix += id
-        vehicle.setTelemetryStreams(DefaultTelemetryStreams.all, telemetryInterval, PublishImmediately)
         context.system.scheduler.scheduleOnce(1.second) {
           missions.runFlight(vehicle)
         }
