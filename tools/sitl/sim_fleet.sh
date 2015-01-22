@@ -41,7 +41,7 @@ do
   mkdir -p $DIR
   pushd $DIR
   cp -n ../eeprom.bin .
-  sim_only.sh -I$(($INSTANCE - 1)) -v $VEHICLE -L $LOCATION $@ &
+  sim_only.sh -I$(($INSTANCE - 1)) -v $VEHICLE -L $LOCATION -R0.00005 $@ &
   sleep 8
   popd
 done < fleet.txt

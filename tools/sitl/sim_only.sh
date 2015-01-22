@@ -1,22 +1,27 @@
 #!/bin/bash
 
 # ardupilot SITL script reduced to run just the simulator without mavproxy
+DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 
 # check the instance number to allow for multiple copies of the sim running at once
 INSTANCE=0
 LOCATION="SunnyvaleBaylands"
+OFFSET=0
 WIPE_EEPROM=0
 VEHICLE=""
+
 
 usage()
 {
 cat <<EOF
 Usage: sim_only.sh [options]
 Options:
-    -v VEHICLE       vehicle type (ArduPlane, ArduCopter or APMrover2)
-    -I INSTANCE      instance of simulator (default 0)
-    -L LOCATION      select start location from Tools/autotest/locations.txt
-    -w               wipe EEPROM and reload parameters
+    -v VEHICLE          vehicle type (ArduPlane, ArduCopter or APMrover2)
+    -I INSTANCE         instance of simulator (default 0)
+    -H lat,lon,alt,hdg  latitude, longitude, altitude, heading of home location
+    -L LOCATION         if -H is underfined, select home location from Tools/autotest/locations.txt
+    -R epsilon-offset   randomize initial location within a box delineated by the offset
+    -w                  wipe EEPROM and reload parameters
 
 Note:
     eeprom.bin in the starting directory contains the parameters for your
@@ -26,7 +31,7 @@ Note:
 EOF
 }
 
-while getopts "v:I:L:wh" opt; do
+while getopts "v:I:L:H:R:wh" opt; do
   case $opt in
     v)
       VEHICLE=$OPTARG
@@ -36,6 +41,12 @@ while getopts "v:I:L:wh" opt; do
       ;;
     L)
       LOCATION=$OPTARG
+      ;;
+    H)
+      SIMHOME=$OPTARG
+      ;;
+    R)
+      OFFSET=$OPTARG
       ;;
     w)
       WIPE_EEPROM=1
@@ -70,15 +81,26 @@ FG_PORT="127.0.0.1:"$((5503+10*$INSTANCE))
 autotest=$(dirname $(readlink -e $0))
 
 # get the location information
-SIMHOME=$(cat $autotest/locations.txt | grep -i "^$LOCATION=" | cut -d= -f2)
+if [ -z "$SIMHOME" ]; then
+    SIMHOME=$(cat $autotest/locations.txt | grep -i "^$LOCATION=" | cut -d= -f2)
+fi
+
 [ -z "$SIMHOME" ] && {
     echo "Unknown location $LOCATION"
     usage
     exit 1
 }
+
+LAT=`echo $SIMHOME | cut -d',' -f1`
+LON=`echo $SIMHOME | cut -d',' -f2`
+
+LAT=`echo "scale=7;$LAT+2*$OFFSET*$RANDOM/32767-$OFFSET" | bc`
+LON=`echo "scale=7;$LON+2*$OFFSET*$RANDOM/32767-$OFFSET" | bc`
+SIMHOME=$LAT,$LON,`echo $SIMHOME | cut -d',' -f3,4`
+
 echo "Starting up at $LOCATION : $SIMHOME"
 
-cmd="/tmp/$VEHICLE.build/$VEHICLE.elf -I$INSTANCE -PSYSID_THISMAV=1"
+cmd="$autotest/../../$VEHICLE/$VEHICLE.elf -I$INSTANCE -PSYSID_THISMAV=1 -PARMING_CHECK=0 -PWPNAV_SPEED=2000 -PWPNAV_ACCEL=500"
 if [ $WIPE_EEPROM == 1 ]; then
     cmd="$cmd -w"
 fi
