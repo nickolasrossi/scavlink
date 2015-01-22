@@ -1,6 +1,6 @@
-# Scavlink: an open source Scala library for orchestrating MAVLink-based autonomous vehicles
+# Scavlink: an open source Scala server for orchestrating MAVLink-based autonomous vehicles
 
-Scavlink is an open source Scala library with an embedded WebSocket server for controlling fleets of autonomous vehicles that speak the [MAVLink](http://qgroundcontrol.org/mavlink/start) protocol (e.g. [APM](http://ardupilot.com), [Pixhawk](https://pixhawk.ethz.ch)). It's based on [Akka](http://akka.io), with a fully asynchronous, event-based actor model for handling low-level packet conversations as well as orchestrating higher-level tasks across multiple vehicles.
+Scavlink is a Scala library with an embedded WebSocket server for controlling fleets of autonomous vehicles that speak the [MAVLink](http://qgroundcontrol.org/mavlink/start) protocol (e.g. [APM](http://ardupilot.com), [Pixhawk](https://pixhawk.ethz.ch)). It's based on [Akka](http://akka.io), with a fully asynchronous, event-based actor model for handling low-level packet conversations and orchestrating higher-level tasks across multiple vehicles.
 
 It includes a set of async APIs for navigation, telemetry, missions, parameters and more, which can be invoked locally in a Scala application or remotely over a secure WebSocket channel. The API model is extensible, so you’re encouraged to get under the hood, implement your own, and submit a pull request.
 
@@ -17,9 +17,7 @@ The project started when I was looking to explore some ideas around orchestratio
 
 In the diagram above, you may notice that Scavlink occupies a similar position to the excellent [MAVProxy](http://tridge.github.io/MAVProxy/). MAVProxy is a great Python-based command-line GCS with many modules that implement drone operations, and Scavlink can bridge to it as well.
 
-The difference is that Scavlink aims for high scale, high concurrency, cloud deployment, and task execution over the web.
-
-As well, the JVM/Scala/Akka stack will hopefully make drone development more accessible to the community of developers experienced with those tools.
+The difference is that Scavlink aims for high concurrency, cloud deployment, and robust task execution over the web. As well, the JVM/Scala/Akka stack will hopefully make drone development more accessible to developers experienced in those tools.
 
 
 ### Features
@@ -34,8 +32,8 @@ As well, the JVM/Scala/Akka stack will hopefully make drone development more acc
 * Enforced geofencing with stay-in, stay-out, and report-only modes
 * Experimental vehicle proximity monitor
 * Case class code generator for MAVLink messages
-* MAVLink packet logger/viewer compatible with standard flight logs
-* Embedded Google map for following vehicles (a dev tool, not a GCS replacement)
+* MAVLink packet logger/viewer compatible with standard GCS flight logs
+* Embedded Google map for following live vehicles (a dev tool, not a GCS replacement)
 * Bridge packets between vehicles and an external GCS
 
 ### Big TODOs
@@ -68,8 +66,8 @@ For now, getting started means cloning the repository to your machine and buildi
 1. Ensure compatible JDK is installed
 * Clone and build the repository
 * Configure communication links in config file
-* Try running Headless and MapView!
-* Set up the ardupilot SITL simulator
+* Try running Headless and MapView
+* Set up the Ardupilot SITL simulator
 * Try a WebSocket request
 * Try some compiled missions
 
@@ -104,7 +102,8 @@ First, clone and build the MAVLink code generator, then publish it to your local
 ```bash
 $ git clone http://github.com/nickolasrossi/sbt-mavgen
 $ cd sbt-mavgen
-$ sbt compile test
+$ sbt compile 
+$ sbt test
 $ sbt publishLocal
 ```
 
@@ -119,9 +118,9 @@ $ sbt test        # optional - takes some time
 
 ### Configure
 
-You’ll want to configure your MAVLink connections in the config file, so they autostart for you. It doesn’t matter if all connections are available when you start up; the library will just keep trying to reconnect in the background.
+You’ll want to configure your MAVLink connections in the config file so they autostart for you. It doesn’t matter if all connections are available when you start up; the library will just keep trying to reconnect in the background.
 
-We’ll be running main classes in the `it` (IntegrationTest) tree, so edit the config file `src/it/resources/application.conf`. When you create your own Scala project with the library, you'll have your own `application.conf` under `src/main/resources`. Any option you explicitly define in `application.conf` will override the corresponding value in `reference.conf`.
+We’ll be running main classes in the `it` (IntegrationTest) tree, so edit the config file `src/it/resources/application.conf`. When you create your own Scala project with the library, you'll have your own `application.conf` under your `src/main/resources`. Any option you explicitly define in `application.conf` will override the corresponding value in `reference.conf`. See the [TypeSafe Config docs](https://github.com/typesafehub/config).
 
 Connections are configured in an array under `scavlink.connections`.
 
@@ -157,15 +156,15 @@ connections = [
 ]
 ```
 
-As for other configuration options, see the file `src/main/resources/reference.conf`, which contains the complete set of default options with descriptions. 
+As for other configuration options, see the file `src/main/resources/reference.conf`, which contains the complete set of default options with descriptions.
 
 ### First run
 
-A good first test is to plug in your USB radio, turn on the nearest drone, and run the Headless main class.
+A good first test is to plug in your USB radio, turn on the nearest drone, and run the `Headless` main class. Don't worry, this won't make the drone do anything, it just initiates packet communication (but it's a good idea to verify this in `Headless.scala` in case anyone ever checks in a behavior change after this writing).
 
 Be sure to include the single quotes around the sbt argument:
 
-```
+```bash
 $ sbt ‘it:runMain Headless’
 ```
 
@@ -188,7 +187,7 @@ There’s also a MapView main class that will display a Google map and show the 
 
 Once you have the Oracle JDK installed, try the MapView app:
 
-```
+```bash
 $ sbt ‘it:runMain MapView’
 ```
 
@@ -198,7 +197,7 @@ This should stream packets to the console and pop up a Google map in a browser w
 
 You’ll definitely want to run the library against the Ardupilot software-in-the-loop simulator. That’s where you can go nuts with experiments before you fly your real drone into a wall.
 
-3DRobotics has a nice guide to setting up SITL. Follow their steps carefully for your OS. (Note: SITL doesn’t compile on a Mac. If you only have a Mac, try to scrounge up an old computer for a Linux installation if you can.)
+3DRobotics has a nice guide to setting up SITL. Follow their steps carefully for your OS. (Note: SITL doesn’t compile on a Mac. If you only have a Mac, try to scrounge up an old computer for a Linux installation if you can; otherwise, you can set up an instance on your favorite cloud provider.)
 
 http://dev.ardupilot.com/wiki/simulation-2/
 
@@ -210,7 +209,7 @@ Once you have everything running according to their instructions, shut it all do
 
 Copy the files under `scavlink/tools/sitl` to `ardupilot/Tools/autotest`.
 
-```
+```bash
 $ cp -v scavlink/tools/sitl/* ardupilot/Tools/autotest
 scavlink/tools/sitl/locations.txt -> ardupilot/Tools/autotest/locations.txt
 scavlink/tools/sitl/sim_fleet.sh -> ardupilot/Tools/autotest/sim_fleet.sh
@@ -223,7 +222,7 @@ Go back to your scavlink configuration and ensure the `tcp-client` connection re
 
 Then unplug your 3DR radio and start the MapView app:
 
-```
+```bash
 $ sbt ‘it:runMain MapView’
 ```
 
@@ -249,7 +248,9 @@ The server requires authentication - we don't want intruders connecting and cras
 
 Point Chrome to:
 
+```
 http://localhost:8080/token?grant_type=password&username=admin&password=[password_here]
+```
 
 replacing the password with the one in your config file (you did change the default password, didn't you? :smile:)
 
@@ -308,13 +309,12 @@ Let's get some telemetry started. Paste this JSON into the Request field and pre
 ```json
 { 
   "startTelemetry": { 
-    "vehicle": "tcp-client:127.0.0.1:5760#1", 
-    "interval": 2 
+    "vehicle": "tcp-client:127.0.0.1:5760#1"
   }
 }
 ```
 
-You should begin to see telemetry messages every 2 seconds:
+You should begin to see telemetry messages every 2 seconds. (To change the interval, you can add an `"interval"` property to the JSON above with a number between 1 and 60 seconds.)
 
 ```json
 {"telemetry":{"vehicle":"tcp-client:127.0.0.1:5760#1","location":[37.4117603,-121.9941601,0.0],"batteryVoltage":12.586999893188477,"state":"STANDBY","mode":"Manual","throttle":0.0,"course":0.0,"heading":-295.61,"groundspeed":0.0,"climb":0.0,"gpsFix":"3D"}}
@@ -340,7 +340,7 @@ You should see two progress notifications for the new task:
 {"taskProgress":{"progress":0,"message":"started","data":{}},"context":"my-id-1"}
 ```
 
-On the map, you should see your vehicle's throttle ramp up to 56% and the vehicle slowly ascend.
+On the map, you should see your vehicle's throttle ramp up to 56% and the vehicle slowly ascend. (If the vehicle behaves erratically, make sure the SITL process is the only major CPU consumer on its machine.)
 
 When the vehicle reaches 2 meters, it should hover there, and you should see the completion notification:
 
@@ -385,9 +385,9 @@ That's it for now! The WebSocket remains open for more tasks.
 
 ### Compiled test missions
 
-There are a few simulated missions in the code base that you can try out by changing the SimFlight reference at the top of the MapView class.
+There are a few simulated missions in the code base that you can try out by changing the `SimFlight` reference at the top of the `MapView` class.
 
-See the scavlink.test.map.SimFlight class for a selection of missions. Just change the MapView class, recompile, and run.
+See the `scavlink.test.map.SimFlight` class for a selection of missions. Just change the `MapView` class, recompile, and run.
 
 
 ### Keytool (optional)
@@ -429,7 +429,9 @@ Code base tour in the works.
 Path | meaning
 ----- | ------
 /token | obtain a token from credentials (Basic or OAuth2)
-/schema | JSON schema for all recognized API methods
+/schema/requests | JSON schema for WebSocket request messages
+/schema/responses | JSON schema for WebSocket response messages
+/schema/types | JSON type definitions
 /vehicles | list of currently active vehicles
 
 ##### WebSocket JSON messages
