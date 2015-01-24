@@ -78,22 +78,22 @@ class FlightMapActor(scavlink: ScavlinkInstance, map: FlightMap, missions: Fligh
 
   def receive: Receive = {
     case LinkUp(link) =>
-      log.debug(s"!!! Link up: $link")
+      log.info(s"!!! Link up: $link")
       link.events.subscribeToAll(self)
 
     case LinkDown(link) =>
-      log.debug(s"!!! Link down: $link")
+      log.info(s"!!! Link down: $link")
       link.events.unsubscribe(self)
 
     case VehicleUp(vehicle) =>
-      log.debug(s"!!! Vehicle up: $vehicle")
+      log.info(s"!!! Vehicle up: $vehicle")
       val id = vehicle.id
       vehicles += id -> vehicle
       vehicleNumber += id -> nextVehicleNumber()
       map.vehicleUp(vehicle.id, vehicle.info.vehicleType)
 
     case VehicleDown(vehicle) =>
-      log.debug(s"!!! Vehicle down: $vehicle")
+      log.info(s"!!! Vehicle down: $vehicle")
       vehicles -= vehicle.id
       vehicleNumber -= vehicle.id
       map.vehicleDown(vehicle.id)

@@ -62,7 +62,7 @@ class AdHocTestActor(events: ConnectionEventBus) extends Actor with ActorLogging
     commandsToMission(commands)
   }
 
-  val exec: Vehicle => AnyRef = vehicle => LoadMission(vehicle)
+  val exec: Vehicle => AnyRef = vehicle => LoadParameters(vehicle)
 
 
   override def preStart() = events.subscribeToAll(self)
@@ -79,7 +79,7 @@ class AdHocTestActor(events: ConnectionEventBus) extends Actor with ActorLogging
 
     case VehicleUp(vehicle) =>
       log.debug(s"!!! Vehicle up: $vehicle")
-      context.system.scheduler.scheduleOnce(3.seconds, self, exec(vehicle))
+      context.system.scheduler.scheduleOnce(5.seconds, self, exec(vehicle))
 
     case VehicleDown(vehicle) =>
       log.debug(s"!!! Vehicle down: $vehicle")
@@ -94,7 +94,6 @@ class AdHocTestActor(events: ConnectionEventBus) extends Actor with ActorLogging
       if (gpsFixType != gps.fixType) {
         if (gps.fixType > GpsFixType.None && gpsFixType <= GpsFixType.None) {
           println("got fix!")
-          self ! exec(vehicle)
         }
 
         gpsFixType = gps.fixType
@@ -178,7 +177,7 @@ class AdHocTestActor(events: ConnectionEventBus) extends Actor with ActorLogging
     case LoadParameters(vehicle) =>
       vehicle.getAllParameters onSuccess {
         case GetAllParametersResult(_, _, params) =>
-          params.filterKeys(_.startsWith("BAT")).foreach(println)
+          params.filterKeys(_.startsWith("WP")).foreach(println)
       }
 
     case LoadNamedParameters(vehicle, names@_*) =>

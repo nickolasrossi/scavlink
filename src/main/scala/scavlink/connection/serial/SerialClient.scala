@@ -29,10 +29,12 @@ class SerialClient(val settings: SerialClientSettings, val sctx: ScavlinkContext
 
   def receive: Receive = {
     case CommandFailed(cmd: Open, error) =>
-      log.debug(s"Connection failed to ${cmd.port}: $error")
+      log.warning(s"Connection failed to ${cmd.port}: $error")
       doConnect(settings.reconnectInterval)
 
-    case _: Opened =>
+    case Opened(addr, _) =>
+      log.info(s"Opened $addr")
+
       val port = sender()
       start(port ! Write(_), {
         case CommandFailed(w: Write, error) => log.debug(s"Failed to write: $error")

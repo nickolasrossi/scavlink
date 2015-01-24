@@ -35,6 +35,7 @@ The difference is that Scavlink aims for high concurrency, cloud deployment, and
 * MAVLink packet logger/viewer compatible with standard GCS flight logs
 * Embedded Google map for following live vehicles (a dev tool, not a GCS replacement)
 * Bridge packets between vehicles and an external GCS
+* Ardupilot simulator packaged for easy deploy on Amazon EC2 instances
 
 ### Big TODOs
 
@@ -42,7 +43,6 @@ It's a new-ish project. Pull requests welcome!
 
 * Camera operations. Sadly, there are no tasks or APIs yet for image capture.
 * Persistence and clustering. Except for log files, all runtime data is currently transient. But the code base is designed to evolve toward a true, production-ready cloud service.
-* Machine images for cloud hosting.
 * Front-end apps that invoke tasks on the WebSocket server.
 
 ### Why not a REST API?
@@ -197,28 +197,42 @@ This should stream packets to the console and pop up a Google map in a browser w
 
 You’ll definitely want to run the library against the Ardupilot software-in-the-loop simulator. That’s where you can go nuts with experiments before you fly your real drone into a wall.
 
-3DRobotics has a nice guide to setting up SITL. Follow their steps carefully for your OS. (Note: SITL doesn’t compile on a Mac. If you only have a Mac, try to scrounge up an old computer for a Linux installation if you can; otherwise, you can set up an instance on your favorite cloud provider.)
-
-http://dev.ardupilot.com/wiki/simulation-2/
-
 To understand better how SITL components work together, the info on this page is helpful:
 
 https://code.google.com/p/ardupilot-mega/wiki/SITL
 
-Once you have everything running according to their instructions, shut it all down. You’re going to copy over some scripts that will run SITL without mavproxy.
+##### From packaged binaries
 
-Copy the files under `scavlink/tools/sitl` to `ardupilot/Tools/autotest`.
+If you can run SITL on Linux, you may find it easiest to use the precompiled binaries provided in the [companion project](https://githubcom/nickolasrossi/sitl-precompiled). They're provided separately with a GPLv3 license, since they're derived from the Ardupilot project.
+
+Follow the README in the companion project to set up the SITL package, then skip down to "Starting SITL". 
+
+##### Compile it yourself
+
+To compile it yourself, 3DRobotics has a nice guide to setting up SITL. Follow their steps carefully for your OS. (Note: SITL doesn’t compile on a Mac. If you only have a Mac, try to scrounge up an old computer for a Linux installation if you can, or set up an instance on your favorite cloud provider.)
+
+http://dev.ardupilot.com/wiki/simulation-2/
+
+Once you have everything running according to their instructions, shut it all down, and copy the scripts from the `sitl-precompiled` project into the `Tools/autotest` subdirectory.
 
 ```bash
-$ cp -v scavlink/tools/sitl/* ardupilot/Tools/autotest
-scavlink/tools/sitl/locations.txt -> ardupilot/Tools/autotest/locations.txt
-scavlink/tools/sitl/sim_fleet.sh -> ardupilot/Tools/autotest/sim_fleet.sh
-scavlink/tools/sitl/sim_only.sh -> ardupilot/Tools/autotest/sim_only.sh
+$ cp -v sitl-precompiled/scripts/* ardupilot/Tools/autotest
+sitl-precompiled/scripts/ec2-user-data.txt -> ardupilot/Tools/autotest/locations.txt
+sitl-precompiled/scripts/locations.txt -> ardupilot/Tools/autotest/locations.txt
+sitl-precompiled/scripts/sim_fleet.sh -> ardupilot/Tools/autotest/sim_fleet.sh
+sitl-precompiled/scripts/sim_only.sh -> ardupilot/Tools/autotest/sim_only.sh
 ```
 
-Now, follow the SITL instructions again to start up the simulator - but instead of running `sim_vehicle.sh`, run `sim_only.sh`. This should start the SITL process without MAVProxy.
+##### Starting SITL
 
-Go back to your scavlink configuration and ensure the `tcp-client` connection references the host and port of the SITL process.
+Change to the subdirectory for the vehicle type you want to start, then run `sim_only.sh`, which is a special script provided by the `sitl-precompiled` project to start the SITL process without MAVProxy:
+
+```bash
+$ cd ArduCopter  # cd APMrover2 to simulate a ground rover
+$ ../Tools/autotest/sim_only.sh 
+```
+
+Go back to your scavlink configuration and ensure the `tcp-client` connection references the IP address and port of the SITL process. By default, the port will be 5760.
 
 Then unplug your 3DR radio and start the MapView app:
 
@@ -228,7 +242,19 @@ $ sbt ‘it:runMain MapView’
 
 If all is well, you should see packets on the console coming from the SITL process, and the simulated vehicle should appear on the map.
 
-> Part of the fun with this project is controlling lots of drones at once. However, the SITL process for a single vehicle consumes nearly 100% of a CPU core in order to run a real-time loop. On a dual-core machine, running more than two SITL processes will make them all behave erratically. A good todo item would be an AMI image to run lots of SITL simulations across many EC2 servers.
+##### SITL on EC2
+
+To see Scavlink coordinatee lots of drones, you can start the SITL process on AWS EC2 instances.
+
+To do this, copy the contents of the file `ec2-user-data.txt` to the User Data field when you launch a new instance. This will cause EC2 to install prerequisites and the SITL package in the right places.
+
+> After you launch the instance, you must immediately reboot it to force SITL to start up correctly. For some reason, SITL won't start properly from cloud-init, but will from rc.local.
+
+##### Caveats
+
+Part of the fun with this project is controlling lots of drones at once. However, the SITL process for a single vehicle consumes nearly 100% of a CPU core in order to run a real-time loop. On a dual-core machine, running more than two SITL processes will make them all behave erratically.
+
+On AWS, I've flown many vehicles on T2 micro instances, but for reliable running, you may need at least a C3. Compute power is the primary resource needed; network and memory usage are low.
 
 ### Task requests
 

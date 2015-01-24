@@ -28,7 +28,7 @@ class UdpReceiver(socket: ActorRef, remote: InetSocketAddress, val settings: Udp
       { case Udp.CommandFailed(cmd) => log.debug(s"UDP send failure: $cmd") }
     )
 
-    log.debug(s"UDPReceiver started for $remote")
+    log.info(s"UDPReceiver started for $remote")
   }
 
   def receive = {
@@ -37,6 +37,6 @@ class UdpReceiver(socket: ActorRef, remote: InetSocketAddress, val settings: Udp
 
     case ReceiveTimeout =>
       context.stop(self)
-      log.debug(s"UDPReceiver stopped for $remote")
+      log.info(s"UDPReceiver stopped for $remote")
   }
 }

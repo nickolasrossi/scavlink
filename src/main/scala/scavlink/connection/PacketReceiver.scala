@@ -144,7 +144,7 @@ trait PacketReceiver extends Actor with ActorLogging {
     vehicleHeartbeats foreach { case (systemId, lastHeartbeat) =>
       if (now - lastHeartbeat > heartbeat.timeout.toMillis) {
         val id = vehicles(systemId)._2.id
-        log.debug(s"Vehicle $id went silent")
+        log.warning(s"Vehicle $id went silent")
         stopVehicle(systemId)
       }
     }

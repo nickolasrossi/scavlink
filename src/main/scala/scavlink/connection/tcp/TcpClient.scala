@@ -28,10 +28,11 @@ class TcpClient(val settings: TcpClientSettings, val sctx: ScavlinkContext) exte
 
   def receive = {
     case CommandFailed(cmd: Connect) =>
-      log.debug(s"TCP connection failed to ${cmd.remoteAddress}: ${cmd.failureMessage}")
+      log.warning(s"TCP connection failed to ${cmd.remoteAddress}: ${cmd.failureMessage}")
       doConnect(settings.reconnectInterval)
 
     case Connected(remote, local) =>
+      log.info(s"Established connection to $remote")
       val socket = sender()
       start(socket ! Write(_), {
         case CommandFailed(w: Write) => log.debug("Failed to write: " + w.data)
@@ -49,7 +50,7 @@ class TcpClient(val settings: TcpClientSettings, val sctx: ScavlinkContext) exte
       socket ! Close
 
     case cl: ConnectionClosed =>
-      if (cl.isErrorClosed) log.debug(s"Closed: ${ cl.getErrorCause }")
+      if (cl.isErrorClosed) log.warning(s"Closed: ${ cl.getErrorCause }")
       context.unbecome()
       super.stop()
       doConnect(Duration.Zero)

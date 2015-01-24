@@ -142,7 +142,9 @@ trait TaskSession extends TaskSessionTelemetry {
     }
 
     oldIds diff newIds foreach { id =>
-      send(writeResponse(VehicleDown(vehicles(id))))
+      val vehicle = vehicles(id)
+      send(writeResponse(VehicleDown(vehicle)))
+      stopTelemetry(vehicle)
     }
 
     vehicles = vs
