@@ -193,9 +193,9 @@ $ sbt ‘it:runMain MapView’
 
 This should stream packets to the console and pop up a Google map in a browser window. If your drone has a GPS fix, the map should center on its location.
 
-### SITL
+### Vehicle simulator
 
-You’ll definitely want to run the library against the Ardupilot software-in-the-loop simulator. That’s where you can go nuts with experiments before you fly your real drone into a wall.
+You’ll definitely want to run the Ardupilot software-in-the-loop (SITL) simulator. You can use it to go nuts with experiments - including flying lots of simulated drones on Amazon EC2 - before you fly your real drone into a wall.
 
 To understand better how SITL components work together, the info on this page is helpful:
 
@@ -203,7 +203,7 @@ https://code.google.com/p/ardupilot-mega/wiki/SITL
 
 ##### From packaged binaries
 
-If you can run SITL on Linux, you may find it easiest to use the precompiled binaries provided in the [companion project](https://githubcom/nickolasrossi/sitl-precompiled). They're provided separately with a GPLv3 license, since they're derived from the Ardupilot project.
+If you can run SITL on Linux, you may find it easiest to use the precompiled binaries provided in the [companion project](https://github.com/nickolasrossi/sitl-precompiled). They're provided separately with a GPLv3 license, since they're derived from the Ardupilot project.
 
 Follow the README in the companion project to set up the SITL package, then skip down to "Starting SITL". 
 
